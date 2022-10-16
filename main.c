@@ -3,9 +3,16 @@
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pthread.h>
+
+typedef struct queueEl{
+    char* filename;
+    struct queueEl * next;
+} node;
 
 void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach
 {
+
     DIR* oDir;
     struct dirent* rDir;
     if (access(dir, F_OK) == 0) //file exist
@@ -49,6 +56,16 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
 
 int main(int argc, char* argv[])
 {
+    int queueSize = 0;
+    node * tmpPointer;
+    node * queueHead;
+    pthread_mutex_t mtx;
+    pthread_mutex_t(&mtx,NULL);
+    pthread_cond_t queueNotFull;
+    pthread_cond_t queueNotEmpty;
+    pthread_cond_init(&queueNotFull, NULL);
+    pthread_cond_init(&queueNotEmpty, NULL);
+
     char **fileList;
     int sizeFileList = 0;
     char **dirList;
@@ -118,5 +135,33 @@ int main(int argc, char* argv[])
     
     //END of directory exploration
 
-    
+    //START producing
+
+    for(int i=0;i<sizeFileList;i++)
+    {
+        Pthread_mutex_lock(&mtx);
+        while(queueSize>=qlen)
+        {
+            wait(queueNotFull,mtx);
+        }
+        if(queueSize == 0)
+        {
+            queueHead = malloc(1*sizeof(node));
+            queueHead->filename = fileList[i];     //shallow copy is enough
+            queueSize = 1;
+        }
+        else
+        {
+            tmpPointer = queueHead->next;
+            while(tmpPointer != NULL)
+            {
+                tmpPointer = tmpPointer->next;
+            }
+            tmpPointer = malloc(1*sizeof(node));
+            tmpPointer->filename = fileList[i];     //shallow copy is enough
+            queueSize++;
+        }
+        Pthread_cond_signal(&queueNotEmpty);
+        Pthread_mutex_unlock(&mtx);
+    }
 }
