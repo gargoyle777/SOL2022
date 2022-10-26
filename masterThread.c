@@ -5,7 +5,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-typedef struct queueEl{
+typedef struct queueEl
+{
     char* filename;
     struct queueEl * next;
 } node;
@@ -17,7 +18,7 @@ typedef struct arguments
     pthread_mutex_t * mtx;
     pthread_cond_t *queueNotFull;
     pthread_cond_t *queueNotEmpty;
-    int exitReq;
+    int* exitReq;       //stop when queue size < exit req
 }   workerArgs;
 
 void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach
@@ -35,7 +36,7 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
             {
             (* fileListSize) ++;
                 fileList = realloc((* fileListSize) * sizeof(char*));
-                fileList[(* fileListSize) - 1] = malloc(strlen(dir) * sizeof(char));
+                fileList[(* fileListSize) - 1] = calloc(strlen(dir) +1, sizeof(char));
                 strcpy(fileList[(* fileListSize) - 1], dir); 
             }       
             else        //another type of error
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
     int qlen = 8;       //default is 8
     int dirFlag = 0;        //check for directory
     int delay = 0;        //default is 0
-
+    int masterExitReq = -1;
     //START parsing 
 
     for(ac = 1; ac<argc; ac++) //0 is filename          should check if file list is 0 only when -d is present
@@ -123,7 +124,7 @@ int main(int argc, char* argv[])
             {
                 sizeDirList ++;
                 dirList = realloc(sizeDirList * sizeof(char*));
-                dirList[sizeDirList - 1] = malloc(strlen(argv[ac]) * sizeof(char));
+                dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 strcpy(dirList[sizeDirList - 1], argv[ac]);
 
             }
@@ -131,7 +132,7 @@ int main(int argc, char* argv[])
             {
                 sizeFileList ++;
                 fileList = realloc(sizeFileList * sizeof(char*));
-                fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) * sizeof(char));
+                fileList[sizeFileList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 strcpy(fileList[sizeFileList - 1], argv[ac]);
                 
             }
@@ -146,6 +147,12 @@ int main(int argc, char* argv[])
     {
         directoryDigger(dirList[i], fileList, &sizeFileList);
     }
+
+    for(i=0; i<sizeDirList; i++)
+    {
+        free( dirList[i]);
+    }
+    free(dirList);
     
     //END of directory exploration
 
@@ -159,7 +166,7 @@ int main(int argc, char* argv[])
         tSlavesArg[i].mtx = &mtx;
         tSlavesArg[i].queueNotEmpty = &queueNotEmpty;
         tSlavesArg[i].queueNotFull = &queueNotFull;
-        tSlavesArg[i].exitReq = 0;
+        tSlavesArg[i].exitReq = &masterExitReq;
         pthread_create(&(tSlaves[i]), NULL, &worker, &(tSlavesArg[i]));  
     }
     
@@ -193,4 +200,20 @@ int main(int argc, char* argv[])
         Pthread_cond_signal(&queueNotEmpty);
         Pthread_mutex_unlock(&mtx);
     }
+    Pthread_mutex_lock(&mtx);
+        masterExitReq = nthread;
+    Pthread_mutex_unlock(&mtx);
+    for(i=0; i<nthread;i++)
+    {
+        pthread_join(tSlaves[i], NULL);
+    }
+    //dopo che tutti i thread sono terminati
+    //faccio i vari join per riottenere le risorse
+    for(i=0;i<sizeFileList;i++)
+    {
+        free(fileList[i]);
+    }
+    free(fileList);
+    free(tSlaves);
+    free(tSlavesArg);
 }
