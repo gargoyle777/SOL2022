@@ -6,24 +6,13 @@
 #include <sys/un.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <unistd.h>
 #define UNIX_PATH_MAX 255
-#define SOCKNAME "./mysock"
+#define SOCKNAME "./farm.sck"
+#include "workerThread.h"
 
-typedef struct queueEl
-{
-    char* filename;
-    struct queueEl * next;
-} node;
-
-typedef struct arguments 
-{
-    node* queueHead;
-    int* queueSize;
-    pthread_mutex_t *mtx;
-    pthread_cond_t *queueNotFull;
-    pthread_cond_t *queueNotEmpty;
-    int* exitReq;
-}   workerArgs;
+typedef struct arguments workerArgs;
 
 static void cleanup_handler(void* arg)
 {
@@ -32,7 +21,7 @@ static void cleanup_handler(void* arg)
 
 static void lock_cleanup_handler(void* arg)
 {
-    Pthread_mutex_unlock(arg);
+    pthread_mutex_unlock(arg);
 }
 
 static void target_cleanup_handler(void* arg)
@@ -43,7 +32,35 @@ static void target_cleanup_handler(void* arg)
 
 static void socket_cleanup_handler(void* arg)
 {
-    close(arg);
+    close(*((int*) arg));
+}
+
+static void file_cleanup_handler(void *arg)
+{
+    fclose(arg);
+}
+
+static long fileCalc(char* fileAddress)
+{
+    FILE *file;
+    struct stat st;
+    long tmp;
+    int i=0;
+    long result = 0;
+    if(stat(fileAddress, &st) != 0)
+    {
+        //check error
+    }
+    file = fopen(fileAddress, "rb"); 
+    pthread_cleanup_push(file_cleanup_handler, &file);
+    while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
+    {
+        result = result + (tmp * i);
+        i++;
+    }
+    pthread_cleanup_pop(1); //true per fare il fclose
+    //check if eof or error
+    return result;
 }
 
 void* worker(void* arg)
@@ -76,28 +93,31 @@ void* worker(void* arg)
 
     while(!endFlag)
     {
-        Pthread_mutex_lock(mtx);
+        pthread_mutex_lock(mtx);
         pthread_cleanup_push(lock_cleanup_handler, mtx);
-        while(queueSize==0)
+        while(*queueSize==0)
         {
-            Pthread_cond_wait(queueNotEmpty,mtx);
+            pthread_cond_wait(queueNotEmpty,mtx);
         }
-        if( *(((workerArgs*) arg)->exitReq) >= queueSize)   endFlag = 1;
+        if( *(((workerArgs*) arg)->exitReq) >= *queueSize)   endFlag = 1;
         target = *head;
         head = head->next;
-        queueSize--; 
+        (*queueSize)--; 
         pthread_cleanup_push(target_cleanup_handler, &target);
-        Pthread_cond_signal(queueNotFull);
-        Pthread_mutex_unlock(mtx);
+        pthread_cond_signal(queueNotFull);
+        pthread_mutex_unlock(mtx);
 
         pthread_cleanup_pop(0);
         result = fileCalc(target.filename);
-        ltoa(result,charLong,10);
+
+        sprintf(charLong,"%ld",result);
+
         tmpString = calloc( (strlen(target.filename)+strlen(charLong)+2),sizeof(char));
         pthread_cleanup_push(cleanup_handler, tmpString);
         strcat(tmpString,target.filename);
-        strcat(tmpString,'/');
+        strcat(tmpString,"/");
         strcat(tmpString,charLong);
+        printf("worker scrive %s",tmpString);
         write(fdSKT, tmpString, strlen(tmpString));    
         pthread_cleanup_pop(1); //true per fare il free della stringa
         pthread_cleanup_pop(1); //true per fare il free del node
@@ -107,23 +127,3 @@ void* worker(void* arg)
     pthread_exit((void *) 0);
 }
 
-long fileCalc(char* fileAddress)
-{
-    FILE *file;
-    struct stat st;
-    long tmp;
-    int i=0;
-    long result = 0;
-    if(stat(fileAddress, &st) != 0)
-    {
-        //check error
-    }
-    file = fopen(fileAddress, "rb"); 
-    while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
-    {
-        result = result + (tmp * i);
-        i++;
-    }
-    //check if eof or error
-    return result;
-}

@@ -1,41 +1,30 @@
 //TODO: check for error when accessing the array
+#include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <string.h>
+#include "workerThread.h"
 
-typedef struct queueEl
-{
-    char* filename;
-    struct queueEl * next;
-} node;
-
-typedef struct arguments 
-{
-    node* queueHead;
-    int* queueSize;
-    pthread_mutex_t * mtx;
-    pthread_cond_t *queueNotFull;
-    pthread_cond_t *queueNotEmpty;
-    int* exitReq;       //stop when queue size < exit req
-}   workerArgs;
+typedef struct queueEl node;
+typedef struct arguments workerArgs;
 
 void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach
 {
-
     DIR* oDir;
     struct dirent* rDir;
     if (access(dir, F_OK) == 0) //file exist
     {
         errno = 0;
-        oDir = openDir(dir);
+        oDir = opendir(dir);
         if( oDir == NULL)     //file exist but its not a directory
         {   
             if(errno == ENOTDIR)        //not a directory
             {
             (* fileListSize) ++;
-                fileList = realloc((* fileListSize) * sizeof(char*));
+                fileList = realloc(fileList,(* fileListSize) * sizeof(char*));
                 fileList[(* fileListSize) - 1] = calloc(strlen(dir) +1, sizeof(char));
                 strcpy(fileList[(* fileListSize) - 1], dir); 
             }       
@@ -47,14 +36,14 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
         else        //file exist and its a directory or different type of error
         {
             errno = 0;
-            while( (NULL!= (rDir = readdir(dir))) )
+            while( (NULL!= (rDir = readdir(oDir))) )
             {
                 directoryDigger(rDir->d_name, fileList, fileListSize);
                 //Check errno
             }
             if(errno == 0)
             {
-                closedir(rDir);
+                closedir(oDir);
             }
             
         }
@@ -87,6 +76,7 @@ int main(int argc, char* argv[])
     int sizeDirList = 0;
     int ac; //counts how many argument i have checked
     int nthread = 4;       //default is 4
+    char* charnthread="4";
     int qlen = 8;       //default is 8
     int dirFlag = 0;        //check for directory
     int delay = 0;        //default is 0
@@ -102,6 +92,7 @@ int main(int argc, char* argv[])
             case 'n':       //number of thread
                 ac++;
                 nthread = atoi(argv[ac]);
+                charnthread=argv[ac];
                 break;
             case 'q':       //concurrent line's length
                 ac++;
@@ -123,7 +114,7 @@ int main(int argc, char* argv[])
             if(dirFlag)
             {
                 sizeDirList ++;
-                dirList = realloc(sizeDirList * sizeof(char*));
+                dirList = realloc(dirList,sizeDirList * sizeof(char*));
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 strcpy(dirList[sizeDirList - 1], argv[ac]);
 
@@ -131,7 +122,7 @@ int main(int argc, char* argv[])
             else
             {
                 sizeFileList ++;
-                fileList = realloc(sizeFileList * sizeof(char*));
+                fileList = realloc(fileList, sizeFileList * sizeof(char*));
                 fileList[sizeFileList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 strcpy(fileList[sizeFileList - 1], argv[ac]);
                 
@@ -140,6 +131,21 @@ int main(int argc, char* argv[])
     }
 
     //END parsing
+
+    //START collector process
+    char *collectorPath="./collector";
+    char *collectorArgs[]={collectorPath,charnthread};
+    int pid;
+    pid= fork();
+    if(pid == -1)   //padre, errore
+    {
+        //gestione errore
+    }
+    if(pid==0)  //figlio
+    {
+        execv(collectorPath,collectorArgs);
+    }
+    //END of collector process
 
     //START directory exploration
 
@@ -175,10 +181,10 @@ int main(int argc, char* argv[])
 
     for(i=0;i<sizeFileList;i++)
     {
-        Pthread_mutex_lock(&mtx);
+        pthread_mutex_lock(&mtx);
         while(queueSize>=qlen)
         {
-            wait(queueNotFull,mtx);
+            pthread_cond_wait(&queueNotFull,&mtx);
         }
         if(queueSize == 0)
         {
@@ -197,18 +203,16 @@ int main(int argc, char* argv[])
             tmpPointer->filename = fileList[i];     //shallow copy is enough
             queueSize++;
         }
-        Pthread_cond_signal(&queueNotEmpty);
-        Pthread_mutex_unlock(&mtx);
+        pthread_cond_signal(&queueNotEmpty);
+        pthread_mutex_unlock(&mtx);
     }
-    Pthread_mutex_lock(&mtx);
+    pthread_mutex_lock(&mtx);
         masterExitReq = nthread;
-    Pthread_mutex_unlock(&mtx);
+    pthread_mutex_unlock(&mtx);
     for(i=0; i<nthread;i++)
     {
         pthread_join(tSlaves[i], NULL);
     }
-    //dopo che tutti i thread sono terminati
-    //faccio i vari join per riottenere le risorse
     for(i=0;i<sizeFileList;i++)
     {
         free(fileList[i]);
