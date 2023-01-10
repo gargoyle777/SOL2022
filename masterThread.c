@@ -11,6 +11,36 @@
 typedef struct queueEl node;
 typedef struct arguments workerArgs;
 
+volatile sig_atomic_t flagEndFetching= 0;
+volatile sig_atomic_t flagSIGUSR1 = 0;
+
+//error handler function
+void handle_sighup(int sig)
+{
+    flagEndFetching = 1;
+}
+
+void handle_sigint(int sig)
+{
+    flagEndFetching = 1;
+}
+
+void handle_sigquit(int sig)
+{
+    flagEndFetching = 1;
+}
+
+void handle_sigterm(int sig)
+{
+    flagEndFetching = 1;
+}
+
+void handle_sigusr1(int sig)
+{
+    flagEndFetching = 1;
+    flagSIGUSR1 = 1;
+}
+
 void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach
 {
     DIR* oDir;
@@ -56,6 +86,10 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
 
 int main(int argc, char* argv[])
 {
+    //for masking
+    sigset_t set;
+    struct sigaction sa;
+
     int queueSize = 0;
     node * tmpPointer;
     node * queueHead;
@@ -80,7 +114,28 @@ int main(int argc, char* argv[])
     int qlen = 8;       //default is 8
     int dirFlag = 0;        //check for directory
     int delay = 0;        //default is 0
-    int masterExitReq = -1;
+    int masterExitReq = 0;
+
+    //start signal masking
+    sigfillset(&set);
+    pthread_sgmask(SIG_SETMASK,&set,NULL);
+
+    memset(&sa,0,sizeof(sa));
+    sa.sa_handler=handle_sighup;
+    sigaction(SIGHUP,&sa,NULL);
+    sa.sa_handler=handle_sigint;
+    sigaction(SIGINT,&sa,NULL);
+    sa.sa_handler=handle_sigquit;
+    sigaction(SIGQUIT,&sa,NULL);
+    sa.sa_handler=handle_sigterm;
+    sigaction(SIGTERM,&sa,NULL);
+    sa.sa_handler=handle_sigusr1;
+    sigaction(SIGUSR1,&sa,NULL);
+
+    sigprocmask(SIG_UNBLOCK, &mask,NULL)
+    //END signal handling
+
+
     //START parsing 
 
     for(ac = 1; ac<argc; ac++) //0 is filename          should check if file list is 0 only when -d is present
@@ -134,7 +189,7 @@ int main(int argc, char* argv[])
 
     //START collector process
     char *collectorPath="./collector";
-    char *collectorArgs[]={collectorPath,charnthread};
+    char *collectorArgs[]={collectorPath,charnthread,NULL};
     int pid;
     pid= fork();
     if(pid == -1)   //padre, errore
@@ -182,9 +237,13 @@ int main(int argc, char* argv[])
     for(i=0;i<sizeFileList;i++)
     {
         pthread_mutex_lock(&mtx);
-        while(queueSize>=qlen)
+        while(queueSize>=qlen)  //full queue
         {
             pthread_cond_wait(&queueNotFull,&mtx);
+        }
+        if(flagEndFetching)     //setted
+        {
+            break;
         }
         if(queueSize == 0)
         {
@@ -206,9 +265,26 @@ int main(int argc, char* argv[])
         pthread_cond_signal(&queueNotEmpty);
         pthread_mutex_unlock(&mtx);
     }
+    if(flagEndFetching)
+    {
+        pthread_mutex_lock(&mtx);
+        masterExitReq = 1;
+        pthread_mutex_unlock(&mtx);
+    }
+    //TODO:wait to end coda before joining childs, could do this by giving child a cond_signal to
+
     pthread_mutex_lock(&mtx);
-        masterExitReq = nthread;
+    if(flagSIGUSR1)
+    {
+        masterExitReq = 2;
+        kill(pid,SIGUSR2)
+    }
+    else{
+        masterExitReq = 1;
+    }
+    pthread_cond_broadcast(&queueNotEmpty);  //to let every thread to finish its cleaning
     pthread_mutex_unlock(&mtx);
+
     for(i=0; i<nthread;i++)
     {
         pthread_join(tSlaves[i], NULL);
