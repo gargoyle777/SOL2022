@@ -9,6 +9,13 @@
 #include <sys/select.h>
 #include "workerThread.h"
 
+#define ec_meno1(s,m) \
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+#define ec_null(s,m) \
+    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+#define ec_zero(s,m) \
+    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
+
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 277
 #define UNIX_PATH_MAX 255
@@ -39,17 +46,17 @@ int main(int argc, char* argv[])
 {
     sigset_t mask;
     //signal handling for sigusr2
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGUSR2);
+    ec_meno1(sigemptyset(&mask),errno);
+    ec_meno1(sigaddset(&mask, SIGUSR2),errno);
 
-    sigprocmask(SIG_BLOCK, &mask, NULL);
+    ec_meno1(sigprocmask(SIG_BLOCK, &mask, NULL),errno);
     struct sigaction sa;
     sa.sa_handler = sigusr2_handler;
-    sigemptyset(&sa.sa_mask);
+    ec_meno1(sigemptyset(&sa.sa_mask),errno);
     sa.sa_flags = 0;
-    sigaction(SIGUSR2, &sa, NULL);
+    ec_meno1(sigaction(SIGUSR2, &sa, NULL),errno);
 
-    sigprocmask(SIG_UNBLOCK, &mask, NULL);
+    ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),errno);
 
     //fai in modo che esegua sempre unlink(SOCKNAME);
     int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number
@@ -73,67 +80,60 @@ int main(int argc, char* argv[])
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
-    unlink(SOCKNAME) //should make sure the socket file is gone when closing
-    bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa));
-    listen(fdSKT, maxworkers); //somaxconn should be set on worker number
+    ec_meno1(fdSKT,errno); 
+    ec_meno1(unlink(SOCKNAME),errno); //should make sure the socket file is gone when closing
+    ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),errno);
+    ec_meno1(listen(fdSKT, maxworkers),errno); //somaxconn should be set on worker number
     if(fdSKT > actualworkers)   actualworkers=fdSKT;
-    FD_ZERO(&set);
-    FD_SET(fdSKT, &set);
+    ec_meno1(FD_ZERO(&set),errno);
+    ec_meno1(FD_SET(fdSKT, &set),errno);
     while(!flagEndReading)
     {
         rdset=set;
-        if( select(actualworkers+1,&rdset,NULL,NULL,NULL)==-1 )
+        ec_meno1(select(actualworkers+1,&rdset,NULL,NULL,NULL),errno);
+        for(fd=0;fd<=actualworkers; fd++)
         {
-            //gestione errore
-        }
-        else
-        {
-            for(fd=0;fd<=actualworkers; fd++)
+            if(FD_ISSET(fd,&rdset))
             {
-                if(FD_ISSET(fd,&rdset))
+                if(fd == fdSKT)     //socket connect ready
                 {
-                    if(fd == fdSKT)     //socket connect ready
+                    fdC = accept(fdSKT, NULL, 0);
+                    ec_meno1(fdC,errno);
+                    ec_meno1(FD_SET(fdC, &set),errno);
+                    if(fdC>actualworkers)   actualworkers=fdC;
+                }
+                else        //IO socket ready
+                {   
+                    if(flagEndReading)
                     {
-                        fdC = accept(fdSKT, NULL, 0);
-                        FD_SET(fdC, &set);
-                        if(fdC>actualworkers)   actualworkers=fdC;
+                        break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
                     }
-                    else        //IO socket ready
-                    {   
-                        if(flagEndReading)
+                    nread=read(fd,buffer,BUFFERSIZE);   //do per scontato che sizeof(long sia 8)
+                    ec_meno1(nread,errno);
+                    if(nread!=0)
+                    {
+                        for(i = nread-1;i>=0;i--)
                         {
-                            break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
-                        }
-                        nread=read(fd,buffer,BUFFERSIZE);   //do per scontato che sizeof(long sia 8)
-                        if(nread!=0)
-                        {
-                            printf("collector ha ricevuto: %s",buffer);
-                            for(i = nread-1;i>=0;i--)
+                            if(buffer[i] == '/')    //fine numero
                             {
-                                if(buffer[i] == '/')    //fine numero
-                                {
-                                    arraySize++;
-                                    resultArray = realloc(resultArray,arraySize * sizeof(res));
-                                    resultArray[arraySize-1].value = atol(buffer+(i+1));
-                                    resultArray[arraySize - 1].name = (char*) calloc(i+1,sizeof(1));
-                                    strncpy(filenameArray[arraySize - 1],buffer,i);
-                                }
+                                arraySize++;
+                                resultArray = realloc(resultArray,arraySize * sizeof(res));
+                                ec_null(resultArray,"collector's realloc for resultArray failed");
+                                resultArray[arraySize-1].value = atol(buffer+(i+1));
+                                resultArray[arraySize - 1].name = (char*) calloc(i+1,sizeof(1));
+                                strncpy(filenameArray[arraySize - 1],buffer,i);
                             }
-                        }
-                        else
-                        {
-                            //EOF
                         }
                     }
                 }
             }
         }
     }
-    close(fdSKT);
+    ec_meno1(close(fdSKT),errno);
     qsort(resultArray,arraySize,sizeof(res),compare);
     for(i=0;i<arraySize;i++)
     {
-        printf("%ld %s",resultArray[i].value,resultArray[i].name);
+        printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
         free(resultArray[i].name);
         free(resultArray);
     }

@@ -11,6 +11,12 @@
 #define UNIX_PATH_MAX 255
 #define SOCKNAME "./farm.sck"
 #include "workerThread.h"
+#define ec_meno1(s,m) \
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+#define ec_null(s,m) \
+    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+#define ec_zero(s,m) \
+    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
 typedef struct arguments workerArgs;
 
@@ -21,7 +27,7 @@ static void cleanup_handler(void* arg)
 
 static void lock_cleanup_handler(void* arg)
 {
-    pthread_mutex_unlock(arg);
+    ec_zero(pthread_mutex_unlock(arg),"wroker's unlock failed during cleanup");
 }
 
 static void target_cleanup_handler(void* arg)
@@ -32,12 +38,12 @@ static void target_cleanup_handler(void* arg)
 
 static void socket_cleanup_handler(void* arg)
 {
-    close(*((int*) arg));
+    ec_meno1(close(*((int*) arg)),errno);
 }
 
 static void file_cleanup_handler(void *arg)
 {
-    fclose(arg);
+    ec_zero(fclose(arg),errno);
 }
 
 static long fileCalc(char* fileAddress)
@@ -47,11 +53,10 @@ static long fileCalc(char* fileAddress)
     long tmp;
     int i=0;
     long result = 0;
-    if(stat(fileAddress, &st) != 0)
-    {
-        //check error
-    }
+    ec_meno1(stat(fileAddress, &st),errno);
+    
     file = fopen(fileAddress, "rb"); 
+    ec_null(file,errno);
     pthread_cleanup_push(file_cleanup_handler, &file);
     while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
     {
@@ -65,7 +70,7 @@ static long fileCalc(char* fileAddress)
 
 void* worker(void* arg)
 {
-    int endFlag = 0;
+    int masterexitcode;
     char charLong[21];
     char *tmpString;
     long result;
@@ -83,29 +88,30 @@ void* worker(void* arg)
 
     //CONNECT TO THE COLLECTOR:
     fdSKT = socket(AF_UNIX,SOCK_STREAM, 0);
-    while( connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)) ==-1 )
-    {
-        if (errno == ENOENT)    sleep(1);
-        else exit(EXIT_FAILURE);
-    }
+    ec_meno1(fdSKT,errno);
+    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
     //ready to write and read
 
-    while(!endFlag)
+    while(1)
     {
-        pthread_mutex_lock(mtx);
+        ec_zero(pthread_mutex_lock(mtx),"worker's lock failed");
         pthread_cleanup_push(lock_cleanup_handler, mtx);
-        while(*queueSize==0)
+        masterexitcode= *(((workerArgs*) arg)->exitReq);
+        while(*queueSize==0 && masterexitcode==0)
         {
-            pthread_cond_wait(queueNotEmpty,mtx);
+            ec_zero(pthread_cond_wait(queueNotEmpty,mtx),"worker's cond wait on queueNotEmpty failed");
         }
-        if( *(((workerArgs*) arg)->exitReq) >= *queueSize)   endFlag = 1;
+        if (*queueSize ==0) break;  //TODO check if clean up is done anyway
+
+        if( masterexitcode==2)   break; //TODO check clean up, for sigusr1
+
         target = *head;
         head = head->next;
         (*queueSize)--; 
         pthread_cleanup_push(target_cleanup_handler, &target);
-        pthread_cond_signal(queueNotFull);
-        pthread_mutex_unlock(mtx);
+        ec_zero(pthread_cond_signal(queueNotFull),"worker's signal on queueNotFull failed");
+        ec_zero(pthread_mutex_unlock(mtx),"worker's unlock failed");
 
         pthread_cleanup_pop(0);
         result = fileCalc(target.filename);
@@ -113,16 +119,16 @@ void* worker(void* arg)
         sprintf(charLong,"%ld",result);
 
         tmpString = calloc( (strlen(target.filename)+strlen(charLong)+2),sizeof(char));
+        ec_null(tmpString,"calloc on tmpString failed in worker");
         pthread_cleanup_push(cleanup_handler, tmpString);
         strcat(tmpString,target.filename);
         strcat(tmpString,"/");
         strcat(tmpString,charLong);
-        printf("worker scrive %s",tmpString);
-        write(fdSKT, tmpString, strlen(tmpString));    
+        ec_meno1(write(fdSKT, tmpString, strlen(tmpString)),errno);    
         pthread_cleanup_pop(1); //true per fare il free della stringa
         pthread_cleanup_pop(1); //true per fare il free del node
     }
-    close(fdSKT);
+    ec_meno1(close(fdSKT),errno);
     pthread_cleanup_pop(0);
     pthread_exit((void *) 0);
 }

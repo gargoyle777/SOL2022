@@ -7,6 +7,12 @@
 #include <pthread.h>
 #include <string.h>
 #include "workerThread.h"
+#define ec_meno1(s,m) \
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+#define ec_null(s,m) \
+    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+#define ec_zero(s,m) \
+    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
 typedef struct queueEl node;
 typedef struct arguments workerArgs;
@@ -41,7 +47,7 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
-void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach
+void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
 {
     DIR* oDir;
     struct dirent* rDir;
@@ -55,12 +61,14 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
             {
             (* fileListSize) ++;
                 fileList = realloc(fileList,(* fileListSize) * sizeof(char*));
+                ec_null(fileList,"realloc fallita, fileList non allocata");
                 fileList[(* fileListSize) - 1] = calloc(strlen(dir) +1, sizeof(char));
+                ec_null(fileList[(* fileListSize) - 1],"calloc fallita, elemento di fileList non allocato");
                 strcpy(fileList[(* fileListSize) - 1], dir); 
             }       
             else        //another type of error
             {
-                
+                perror(errno);
             }  
         }
         else        //file exist and its a directory or different type of error
@@ -71,7 +79,7 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
                 directoryDigger(rDir->d_name, fileList, fileListSize);
                 //Check errno
             }
-            if(errno == 0)
+            if(errno == 0)  //TODO should close in any case
             {
                 closedir(oDir);
             }
@@ -80,7 +88,7 @@ void directoryDigger(char* dir, char** fileList, int* fileListSize)     //recurs
     } 
     else 
     {
-    //TODO: file doesn't exist
+        perror(errno);
     }
 }
 
@@ -97,8 +105,8 @@ int main(int argc, char* argv[])
     pthread_mutex_init(&mtx,NULL);
     pthread_cond_t queueNotFull;
     pthread_cond_t queueNotEmpty;
-    pthread_cond_init(&queueNotFull, NULL);
-    pthread_cond_init(&queueNotEmpty, NULL);
+    ec_zero(pthread_cond_init(&queueNotFull, NULL),"pthread_cond_init failed on condition queueNotFull");
+    ec_zero(pthread_cond_init(&queueNotEmpty, NULL),"pthread_cond_init failed on condition queueNotEmpty");
 
     pthread_t *tSlaves;
     workerArgs *tSlavesArg;
@@ -117,22 +125,22 @@ int main(int argc, char* argv[])
     int masterExitReq = 0;
 
     //start signal masking
-    sigfillset(&set);
-    pthread_sgmask(SIG_SETMASK,&set,NULL);
+    ec_meno1(sigfillset(&set),errno);
+    ec_zero(pthread_sgmask(SIG_SETMASK,&set,NULL),"pthread_sgmask failed"); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
-    sigaction(SIGHUP,&sa,NULL);
+    ec_meno1(sigaction(SIGHUP,&sa,NULL),errno);
     sa.sa_handler=handle_sigint;
-    sigaction(SIGINT,&sa,NULL);
+    ec_meno1(sigaction(SIGINT,&sa,NULL),errno);
     sa.sa_handler=handle_sigquit;
-    sigaction(SIGQUIT,&sa,NULL);
+    ec_meno1(sigaction(SIGQUIT,&sa,NULL),errno);
     sa.sa_handler=handle_sigterm;
-    sigaction(SIGTERM,&sa,NULL);
+    ec_meno1(sigaction(SIGTERM,&sa,NULL),errno);
     sa.sa_handler=handle_sigusr1;
-    sigaction(SIGUSR1,&sa,NULL);
+    ec_meno1(sigaction(SIGUSR1,&sa,NULL),errno);
 
-    sigprocmask(SIG_UNBLOCK, &mask,NULL)
+    ec_meno1(sigprocmask(SIG_UNBLOCK, &mask,NULL),errno);
     //END signal handling
 
 
@@ -170,7 +178,9 @@ int main(int argc, char* argv[])
             {
                 sizeDirList ++;
                 dirList = realloc(dirList,sizeDirList * sizeof(char*));
+                ec_null(dirList"realloc fallita, dirList non allocata");
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
+                ec_null(dirList[sizeDirList - 1] ,"calloc fallita, elemento di dirList non allocato");
                 strcpy(dirList[sizeDirList - 1], argv[ac]);
 
             }
@@ -178,9 +188,10 @@ int main(int argc, char* argv[])
             {
                 sizeFileList ++;
                 fileList = realloc(fileList, sizeFileList * sizeof(char*));
+                ec_null(fileList,"realloc fallita, fileList non allocata");
                 fileList[sizeFileList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
+                ec_null(fileList[sizeFileList - 1] ,"calloc fallita, elemento di fileList non allocato");
                 strcpy(fileList[sizeFileList - 1], argv[ac]);
-                
             }
         }
     }
@@ -192,10 +203,7 @@ int main(int argc, char* argv[])
     char *collectorArgs[]={collectorPath,charnthread,NULL};
     int pid;
     pid= fork();
-    if(pid == -1)   //padre, errore
-    {
-        //gestione errore
-    }
+    ec_meno1(pid,errno);
     if(pid==0)  //figlio
     {
         execv(collectorPath,collectorArgs);
@@ -219,7 +227,9 @@ int main(int argc, char* argv[])
 
     //START of threading
     tSlaves = malloc(nthread * sizeof(pthread_t));
+    ec_null(tSlaves,"malloc fallita, tSalves non allocato");
     tSlavesArg = malloc(nthread * sizeof(workerArgs));
+    ec_null(tSlavesArg,"malloc fallita, tSalvesArg non allocato");
     for(i=0; i<nthread;i++)
     {
         tSlavesArg[i].queueHead = queueHead;
@@ -228,7 +238,7 @@ int main(int argc, char* argv[])
         tSlavesArg[i].queueNotEmpty = &queueNotEmpty;
         tSlavesArg[i].queueNotFull = &queueNotFull;
         tSlavesArg[i].exitReq = &masterExitReq;
-        pthread_create(&(tSlaves[i]), NULL, &worker, &(tSlavesArg[i]));  
+        ec_zero(pthread_create(&(tSlaves[i]), NULL, &worker, &(tSlavesArg[i])),"ptread_create failure");  
     }
     
 
@@ -236,10 +246,10 @@ int main(int argc, char* argv[])
 
     for(i=0;i<sizeFileList;i++)
     {
-        pthread_mutex_lock(&mtx);
+        ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx");
         while(queueSize>=qlen)  //full queue
         {
-            pthread_cond_wait(&queueNotFull,&mtx);
+            ec_zero(pthread_cond_wait(&queueNotFull,&mtx),"pthread_cond_wait failed on queueNotFull");
         }
         if(flagEndFetching)     //setted
         {
@@ -248,6 +258,7 @@ int main(int argc, char* argv[])
         if(queueSize == 0)
         {
             queueHead = malloc(1*sizeof(node));
+            ec_null(queueHead,"malloc of queueHead failed");
             queueHead->filename = fileList[i];     //shallow copy is enough
             queueSize = 1;
         }
@@ -262,32 +273,31 @@ int main(int argc, char* argv[])
             tmpPointer->filename = fileList[i];     //shallow copy is enough
             queueSize++;
         }
-        pthread_cond_signal(&queueNotEmpty);
-        pthread_mutex_unlock(&mtx);
+        ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
+        ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
     }
     if(flagEndFetching)
     {
-        pthread_mutex_lock(&mtx);
+        ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before setting masterExitReq");
         masterExitReq = 1;
-        pthread_mutex_unlock(&mtx);
+        ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx, after setting masterExitReq");
     }
-    //TODO:wait to end coda before joining childs, could do this by giving child a cond_signal to
 
-    pthread_mutex_lock(&mtx);
+    ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
     if(flagSIGUSR1)
     {
         masterExitReq = 2;
-        kill(pid,SIGUSR2)
+        kill(pid,SIGUSR2);
     }
     else{
         masterExitReq = 1;
     }
-    pthread_cond_broadcast(&queueNotEmpty);  //to let every thread to finish its cleaning
-    pthread_mutex_unlock(&mtx);
+    ec_zero(pthread_cond_broadcast(&queueNotEmpty),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
+    ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
 
     for(i=0; i<nthread;i++)
     {
-        pthread_join(tSlaves[i], NULL);
+        ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
     for(i=0;i<sizeFileList;i++)
     {
