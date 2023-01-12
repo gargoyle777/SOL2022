@@ -8,7 +8,6 @@
 #include <sys/un.h>
 #include <string.h>
 #include <sys/select.h>
-#include "workerThread.h"
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
@@ -20,10 +19,6 @@
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 277
 #define UNIX_PATH_MAX 255
-
-typedef struct queueEl node;
-typedef struct arguments workerArgs;
-
 
 volatile sig_atomic_t flagEndReading= 0;
 
@@ -120,7 +115,7 @@ int main(int argc, char* argv[])
                                 ec_null(resultArray,"collector's realloc for resultArray failed");
 
                                 resultArray[arraySize-1].value = atol(buffer+(i+1));
-                                resultArray[arraySize - 1].name = (char*) calloc(i+1,sizeof(1));
+                                resultArray[arraySize-1].name = (char*) calloc(i+1,sizeof(1));
                                 ec_null(resultArray[arraySize - 1].name,"collector calloc failed for file names");
                             }
                         }

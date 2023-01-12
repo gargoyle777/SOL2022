@@ -1,22 +1,21 @@
+#include <pthread.h>
 #ifndef WORKERTHREAD_H_
 #define WORKERTHREAD_H_
+
 
 struct queueEl
 {
     char *filename;
     struct queueEl *next;
 };
-typedef struct queueEl node;
 
-struct arguments
-{
-    struct queueEl *queueHead;
-    int *queueSize;
-    pthread_mutex_t *mtx;
-    pthread_cond_t *queueNotFull;
-    pthread_cond_t *queueNotEmpty;
-    int *exitReq;
-};
+//variabili condivise
+extern struct queueEl *queueHead;
+extern int queueSize;
+extern pthread_mutex_t mtx;
+extern pthread_cond_t queueNotFull;
+extern pthread_cond_t queueNotEmpty;
+extern int masterExitReq;
 
 void* worker(void *arg);
 

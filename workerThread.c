@@ -27,12 +27,12 @@ static void cleanup_handler(void* arg)
 
 static void lock_cleanup_handler(void* arg)
 {
-    ec_zero(pthread_mutex_unlock(arg),"wroker's unlock failed during cleanup");
+    ec_zero(pthread_mutex_unlock(arg),"worker's unlock failed during cleanup");
 }
 
 static void target_cleanup_handler(void* arg)
 {
-    free(((node*) arg)->filename);
+    free(((struct queueEl*) arg)->filename);
     free(arg);
 }
 
@@ -43,7 +43,7 @@ static void socket_cleanup_handler(void* arg)
 
 static void file_cleanup_handler(void *arg)
 {
-    ec_zero(fclose(arg),errno);
+    ec_zero(fclose(*(FILE**)arg),errno);
 }
 
 static long fileCalc(char* fileAddress)
@@ -70,7 +70,6 @@ static long fileCalc(char* fileAddress)
 
 void* worker(void* arg)
 {
-    int masterexitcode;
     char charLong[21];
     char *tmpString;
     long result;
@@ -79,14 +78,9 @@ void* worker(void* arg)
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
 
-    node target;
-    node* head = ((workerArgs*) arg)->queueHead;
-    pthread_mutex_t *mtx = ((workerArgs*) arg)->mtx;
-    int* queueSize = ((workerArgs*) arg)->queueSize;
-    pthread_cond_t *queueNotFull = ((workerArgs*) arg)->queueNotFull;
-    pthread_cond_t *queueNotEmpty = ((workerArgs*) arg)->queueNotEmpty;
+    struct queueEl target;
 
-    //CONNECT TO THE COLLECTOR:
+    //CONNECT TO THE COLLECTOR
     fdSKT = socket(AF_UNIX,SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
@@ -96,22 +90,21 @@ void* worker(void* arg)
     while(1)
     {
         ec_zero(pthread_mutex_lock(mtx),"worker's lock failed");
-        pthread_cleanup_push(lock_cleanup_handler, mtx);
-        masterexitcode= *(((workerArgs*) arg)->exitReq);
-        while(*queueSize==0 && masterexitcode==0)
+        pthread_cleanup_push(lock_cleanup_handler, &mtx);
+        while(queueSize==0 && masterExitReq==0)
         {
-            ec_zero(pthread_cond_wait(queueNotEmpty,mtx),"worker's cond wait on queueNotEmpty failed");
+            ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
         }
-        if (*queueSize ==0) break;  //TODO check if clean up is done anyway
+        if (queueSize ==0) break;  //TODO check if clean up is done anyway
 
-        if( masterexitcode==2)   break; //TODO check clean up, for sigusr1
+        if(masterExitReq==2)   break; //TODO check clean up, for sigusr1
 
-        target = *head;
-        head = head->next;
-        (*queueSize)--; 
+        target = *queueHead;
+        queueHead = queueHead->next;
+        queueSize--; 
         pthread_cleanup_push(target_cleanup_handler, &target);
-        ec_zero(pthread_cond_signal(queueNotFull),"worker's signal on queueNotFull failed");
-        ec_zero(pthread_mutex_unlock(mtx),"worker's unlock failed");
+        ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+        ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
         pthread_cleanup_pop(0);
         result = fileCalc(target.filename);
