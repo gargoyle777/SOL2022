@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
     sa.sa_handler=handle_sigusr1;
     ec_meno1(sigaction(SIGUSR1,&sa,NULL),errno);
 
-    ec_meno1(sigemptyset(&set,errno));
+    ec_meno1(sigemptyset(&set),errno);
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),errno);
     //END signal handling
 
