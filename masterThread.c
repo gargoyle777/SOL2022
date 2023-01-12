@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <string.h>
+#include <signal.h>
 #include "workerThread.h"
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
@@ -126,7 +127,7 @@ int main(int argc, char* argv[])
 
     //start signal masking
     ec_meno1(sigfillset(&set),errno);
-    ec_zero(pthread_sgmask(SIG_SETMASK,&set,NULL),"pthread_sgmask failed"); 
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),errno); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
@@ -140,7 +141,8 @@ int main(int argc, char* argv[])
     sa.sa_handler=handle_sigusr1;
     ec_meno1(sigaction(SIGUSR1,&sa,NULL),errno);
 
-    ec_meno1(sigprocmask(SIG_UNBLOCK, &mask,NULL),errno);
+    ec_meno1(sigemptyset(&set,errno));
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),errno);
     //END signal handling
 
 
@@ -178,7 +180,7 @@ int main(int argc, char* argv[])
             {
                 sizeDirList ++;
                 dirList = realloc(dirList,sizeDirList * sizeof(char*));
-                ec_null(dirList"realloc fallita, dirList non allocata");
+                ec_null(dirList,"realloc fallita, dirList non allocata");
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 ec_null(dirList[sizeDirList - 1] ,"calloc fallita, elemento di dirList non allocato");
                 strcpy(dirList[sizeDirList - 1], argv[ac]);
