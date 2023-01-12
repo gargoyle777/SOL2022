@@ -51,11 +51,11 @@ int main(int argc, char* argv[])
     ec_meno1(sigaddset(&mask, SIGUSR2),errno);
 
     ec_meno1(sigprocmask(SIG_BLOCK, &mask, NULL),errno);
-    struct sigaction sa;
-    sa.sa_handler = sigusr2_handler;
-    ec_meno1(sigemptyset(&sa.sa_mask),errno);
-    sa.sa_flags = 0;
-    ec_meno1(sigaction(SIGUSR2, &sa, NULL),errno);
+    struct sigaction siga;
+    siga.sa_handler = sigusr2_handler;
+    ec_meno1(sigemptyset(&siga.sa_mask),errno);
+    siga.sa_flags = 0;
+    ec_meno1(sigaction(SIGUSR2, &siga, NULL),errno);
 
     ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),errno);
 
