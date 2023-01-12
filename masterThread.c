@@ -1,4 +1,5 @@
 //TODO: check for error when accessing the array
+//TODO: directory digger doesnt add the directory name in front of the path
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -45,18 +46,11 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
-//variabili condivise
-struct queueEl *queueHead;
-int queueSize;
-pthread_mutex_t mtx;
-pthread_cond_t queueNotFull;
-pthread_cond_t queueNotEmpty;
-int masterExitReq = 0;
-
 void directoryDigger(char* dir, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
 {
     DIR* oDir;
     struct dirent* rDir;
+    printf("scavo in una directory\n"); //testing
     if (access(dir, F_OK) == 0) //file exist
     {
         errno = 0;
@@ -71,10 +65,12 @@ void directoryDigger(char* dir, char*** fileList, int* fileListSize)     //recur
                 *fileList[(* fileListSize) - 1] = calloc(strlen(dir) +1, sizeof(char));
                 ec_null(*fileList[(* fileListSize) - 1],"calloc fallita, elemento di fileList non allocato");
                 strcpy(*fileList[(* fileListSize) - 1], dir); 
+                printf("testing0\n");//testing
+                printf("%s\n",dir); //testing
             }       
             else        //another type of error
             {
-                perror(errno);
+                perror(strerror(errno));
             }  
         }
         else        //file exist and its a directory or different type of error
@@ -94,12 +90,14 @@ void directoryDigger(char* dir, char*** fileList, int* fileListSize)     //recur
     } 
     else 
     {
-        perror(errno);
+        perror(strerror(errno));
     }
 }
 
 int main(int argc, char* argv[])
 {
+		printf("sto iniziando il main\n");//testing
+
     //for masking
     sigset_t set;
     struct sigaction sa;
@@ -125,25 +123,26 @@ int main(int argc, char* argv[])
     int delay = 0;        //default is 0
 
     //start signal masking
-    ec_meno1(sigfillset(&set),errno);
-    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),errno); 
+    ec_meno1(sigfillset(&set),(strerror(errno)));
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno))); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
-    ec_meno1(sigaction(SIGHUP,&sa,NULL),errno);
+    ec_meno1(sigaction(SIGHUP,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigint;
-    ec_meno1(sigaction(SIGINT,&sa,NULL),errno);
+    ec_meno1(sigaction(SIGINT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigquit;
-    ec_meno1(sigaction(SIGQUIT,&sa,NULL),errno);
+    ec_meno1(sigaction(SIGQUIT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigterm;
-    ec_meno1(sigaction(SIGTERM,&sa,NULL),errno);
+    ec_meno1(sigaction(SIGTERM,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigusr1;
-    ec_meno1(sigaction(SIGUSR1,&sa,NULL),errno);
+    ec_meno1(sigaction(SIGUSR1,&sa,NULL),(strerror(errno)));
 
-    ec_meno1(sigemptyset(&set),errno);
-    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),errno);
+    ec_meno1(sigemptyset(&set),(strerror(errno)));
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
     //END signal handling
 
+	printf("sto per parsare\n");//testing
     //START parsing 
 
     for(ac = 1; ac<argc; ac++) //0 is filename          TODO:should check if file list is 0 only when -d is present
@@ -186,12 +185,14 @@ int main(int argc, char* argv[])
             }
             else
             {
+            	printf("file trovato nell'argomento %d\n",ac); //testing
                 sizeFileList ++;
                 fileList = realloc(fileList, sizeFileList * sizeof(char*));
                 ec_null(fileList,"realloc fallita, fileList non allocata");
                 fileList[sizeFileList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 ec_null(fileList[sizeFileList - 1] ,"calloc fallita, elemento di fileList non allocato");
                 strcpy(fileList[sizeFileList - 1], argv[ac]);
+                printf("%s\n",argv[ac]); //testing
             }
         }
     }
@@ -203,7 +204,7 @@ int main(int argc, char* argv[])
     char *collectorArgs[]={collectorPath,charnthread,NULL};
     int pid;
     pid= fork();
-    ec_meno1(pid,errno);
+    ec_meno1(pid,(strerror(errno)));
     if(pid==0)  //figlio
     {
         execv(collectorPath,collectorArgs);
@@ -214,6 +215,7 @@ int main(int argc, char* argv[])
 
     for(i=0; i<sizeDirList; i++)
     {
+    	printf("sto per iniziare a scavare");
         directoryDigger(dirList[i], &fileList, &sizeFileList);
     }
 
@@ -234,7 +236,7 @@ int main(int argc, char* argv[])
     }
     
     //START producing
-
+	printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
     for(i=0;i<sizeFileList;i++)
     {
         ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx");
@@ -248,10 +250,12 @@ int main(int argc, char* argv[])
         }
         if(queueSize == 0)
         {
+        	printf("master inizia a mettere un elemento in testa\n");
             queueHead = malloc(1*sizeof(struct queueEl));
             ec_null(queueHead,"malloc of queueHead failed");
             queueHead->filename = fileList[i];     //TODO: check ifshallow copy is enough
             queueSize = 1;
+            printf("master ha messo un elemento in testa\n");
         }
         else
         {
@@ -268,7 +272,9 @@ int main(int argc, char* argv[])
             queueSize++;
         }
         ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
+        printf("master ha segnalato su queue not empty\n");
         ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
+        printf("master ha lasciato il lock\n");
     }
    
     ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
@@ -285,8 +291,10 @@ int main(int argc, char* argv[])
 
     for(i=0; i<nthread;i++)
     {
+    	printf("master sta iniziando a fare i join\n");
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
+    printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
     {
         free(fileList[i]);
