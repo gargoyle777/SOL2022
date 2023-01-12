@@ -59,7 +59,6 @@ int main(int argc, char* argv[])
 
     ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),errno);
 
-    //fai in modo che esegua sempre unlink(SOCKNAME);
     int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number
     int actualworkers = 0;
     int i = 0; //counter
@@ -70,7 +69,6 @@ int main(int argc, char* argv[])
     struct sockaddr_un sa;
 
     res *resultArray;
-    char **filenameArray;
     int arraySize;
 
     int nread;
@@ -124,7 +122,6 @@ int main(int argc, char* argv[])
                                 resultArray[arraySize-1].value = atol(buffer+(i+1));
                                 resultArray[arraySize - 1].name = (char*) calloc(i+1,sizeof(1));
                                 ec_null(resultArray[arraySize - 1].name,"collector calloc failed for file names");
-                                strncpy(filenameArray[arraySize - 1],buffer,i);
                             }
                         }
                     }
