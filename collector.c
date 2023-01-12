@@ -120,8 +120,10 @@ int main(int argc, char* argv[])
                                 arraySize++;
                                 resultArray = realloc(resultArray,arraySize * sizeof(res));
                                 ec_null(resultArray,"collector's realloc for resultArray failed");
+
                                 resultArray[arraySize-1].value = atol(buffer+(i+1));
                                 resultArray[arraySize - 1].name = (char*) calloc(i+1,sizeof(1));
+                                ec_null(resultArray[arraySize - 1].name,"collector calloc failed for file names");
                                 strncpy(filenameArray[arraySize - 1],buffer,i);
                             }
                         }
@@ -135,8 +137,10 @@ int main(int argc, char* argv[])
     for(i=0;i<arraySize;i++)
     {
         printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
+    }
+    for(i=0;i<arraySize;i++)
+    {
         free(resultArray[i].name);
-        free(resultArray);
     }
     free(resultArray);
 }
