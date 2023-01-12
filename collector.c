@@ -86,8 +86,8 @@ int main(int argc, char* argv[])
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),errno);
     ec_meno1(listen(fdSKT, maxworkers),errno); //somaxconn should be set on worker number
     if(fdSKT > actualworkers)   actualworkers=fdSKT;
-    ec_meno1(FD_ZERO(&set),errno);
-    ec_meno1(FD_SET(fdSKT, &set),errno);
+    FD_ZERO(&set);
+    FD_SET(fdSKT, &set);
     while(!flagEndReading)
     {
         rdset=set;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
                 {
                     fdC = accept(fdSKT, NULL, 0);
                     ec_meno1(fdC,errno);
-                    ec_meno1(FD_SET(fdC, &set),errno);
+                    FD_SET(fdC, &set),errno;
                     if(fdC>actualworkers)   actualworkers=fdC;
                 }
                 else        //IO socket ready
