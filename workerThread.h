@@ -14,7 +14,7 @@ struct arguments
     int *queueSize;
     pthread_mutex_t *mtx;
     pthread_cond_t *queueNotFull;
-    pthread_cond_t *queueNotempty;
+    pthread_cond_t *queueNotEmpty;
     int *exitReq;
 };
 
