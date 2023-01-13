@@ -11,13 +11,13 @@
 #define UNIX_PATH_MAX 255
 #define SOCKNAME "./farm.sck"
 #include "workerThread.h"
+
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
     if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
-
 static void cleanup_handler(void* arg)
 {
     free(arg);
@@ -76,6 +76,7 @@ int masterExitReq = 0;
 void* worker(void* arg)
 {
 	printf("worker avviato\n");//testing
+	int flagwork=1;
     char charLong[21];
     char *tmpString;
     long result;
@@ -92,7 +93,7 @@ void* worker(void* arg)
     printf("worker will try to connect to the socket\n"); //testing
     while(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa))==-1 )
     {
-    	if(errno==ENOENT)
+    	if(errno==2)	//enoent
     	{
     		printf("worker dorme aspettando di connettersi\n");
     		sleep(1);
@@ -105,7 +106,7 @@ void* worker(void* arg)
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
     //ready to write and read
 	printf("worker connesso al collector\n");//testing
-    while(1)
+    while(flagwork==1)
     {
         ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
         pthread_cleanup_push(lock_cleanup_handler, &mtx);
@@ -115,40 +116,43 @@ void* worker(void* arg)
             ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
         }
         printf("worker fuori dal loop con wait, queuesize= %d\n",queueSize);
-        if (queueSize ==0)
+        if(queueSize ==0)
         {
         	printf("worker esce, 0 elementi nella e masterexitreq settato\n");
-        	break;  //TODO check if clean up is done anyw
+        	flagwork=0;
 	}
         if(masterExitReq==2)
         {
            	printf("worker esce, masterexitreq settato a 2\n");
-           	break; //TODO check clean up, for sigusr1
+           	flagwork=0;		//TODO check clean up, for sigusr1
 	}
-	printf("worker cerca di raccogliere l'elemento\n");
-        target = *queueHead;
-        queueHead = queueHead->next;
-        queueSize--; 
-        pthread_cleanup_push(target_cleanup_handler, &target);
-        ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
-        ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
+	if(flagwork==1)
+	{
+		printf("worker cerca di raccogliere l'elemento\n");
+		target = *queueHead;
+		queueHead = queueHead->next;
+		queueSize--; 
+		pthread_cleanup_push(target_cleanup_handler, &target);
+		ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+		ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
-        pthread_cleanup_pop(0);
-        printf("%s",target.filename);
-        result = fileCalc(target.filename);
+		pthread_cleanup_pop(0);
+		printf("worker ha lavorato su %s\n",target.filename);
+		result = fileCalc(target.filename);
 
-        sprintf(charLong,"%ld",result);
+		sprintf(charLong,"%ld",result);
 
-        tmpString = calloc( (strlen(target.filename)+strlen(charLong)+2),sizeof(char));
-        ec_null(tmpString,"calloc on tmpString failed in worker");
-        pthread_cleanup_push(cleanup_handler, tmpString);
-        strcat(tmpString,target.filename);
-        strcat(tmpString,"/");
-        strcat(tmpString,charLong);
-        ec_meno1(write(fdSKT, tmpString, strlen(tmpString)),(strerror(errno)));    
-        pthread_cleanup_pop(1); //true per fare il free della stringa
-        pthread_cleanup_pop(1); //true per fare il free del node
-    }
+		tmpString = calloc( (strlen(target.filename)+strlen(charLong)+2),sizeof(char));
+		ec_null(tmpString,"calloc on tmpString failed in worker");
+		pthread_cleanup_push(cleanup_handler, tmpString);
+		strcat(tmpString,target.filename);
+		strcat(tmpString,"/");
+		strcat(tmpString,charLong);
+		ec_meno1(write(fdSKT, tmpString, strlen(tmpString)),(strerror(errno)));    
+		pthread_cleanup_pop(1); //true per fare il free della stringa
+		pthread_cleanup_pop(1); //true per fare il free del node
+	}
+     }
     ec_meno1(close(fdSKT),(strerror(errno)));
     pthread_cleanup_pop(0);
     pthread_exit((void *) 0);
