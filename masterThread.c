@@ -52,7 +52,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
 {
     DIR* openedDir;
     struct dirent* freshDir;
-    char* tmpString[256];
+    char tmpString[256];
     printf("scavo in una directory\n"); //testing
 
     errno = 0;
@@ -77,7 +77,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
             ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
             strcpy(*fileList[(* fileListSize) - 1], tmpString); 
             printf("testing0\n");//testing
-            printf("%s\n",freshDir); //testing
+            printf("%s\n",freshDir->d_name); //testing
         }
     }
     errno=0;
