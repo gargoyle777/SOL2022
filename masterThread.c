@@ -1,5 +1,5 @@
 //TODO: check for error when accessing the array
-//TODO: directory digger doesnt add the directory name in front of the path
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -97,17 +97,17 @@ void directoryDigger(char* dir, char*** fileList, int* fileListSize)     //recur
 int main(int argc, char* argv[])
 {
 		printf("sto iniziando il main\n");//testing
-	struct sharedholder sh; 
+
     //for masking
     sigset_t set;
     struct sigaction sa;
 
-    sh.queueSize = 0;
-    sh.masterExitReq=0;
+    int queueSize = 0;
     struct queueEl * tmpPointer;
-    pthread_mutex_init(&(sh.mtx),NULL);
-    ec_zero(pthread_cond_init(&(sh.queueNotFull), NULL),"pthread_cond_init failed on condition queueNotFull");
-    ec_zero(pthread_cond_init(&(sh.queueNotEmpty), NULL),"pthread_cond_init failed on condition queueNotEmpty");
+    pthread_mutex_init(&mtx,NULL);
+    ec_zero(pthread_cond_init(&queueNotFull, NULL),"pthread_cond_init failed on condition queueNotFull");
+    ec_zero(pthread_cond_init(&queueNotEmpty, NULL),"pthread_cond_init failed on condition queueNotEmpty");
+
 
     pthread_t *tSlaves;
 
@@ -241,7 +241,8 @@ int main(int argc, char* argv[])
     ec_null(tSlaves,"malloc fallita, tSalves non allocati");
     for(i=0; i<nthread;i++)
     {
-        ec_zero(pthread_create(&(tSlaves[i]), NULL, &worker, &sh),"ptread_create failure");  
+        ec_zero(pthread_create(&(tSlaves[i]), NULL, &worker, NULL),"ptread_create failure");  
+
     }
     
     //START producing
@@ -260,17 +261,21 @@ int main(int argc, char* argv[])
         if(sh.queueSize == 0)
         {
         	printf("master inizia a mettere un elemento in testa\n");
-            sh.queueHead = malloc(1*sizeof(struct queueEl));
-            ec_null(sh.queueHead,"malloc of queueHead failed");
-            sh.queueHead->filename = fileList[i];     //TODO: check ifshallow copy is enough
-            sh.queueSize = 1;
+
+            queueHead = malloc(1*sizeof(struct queueEl));
+            ec_null(queueHead,"malloc of queueHead failed");
+            queueHead->filename = fileList[i];     //TODO: check ifshallow copy is enough
+            queueSize = 1;
+
             printf("master ha messo un elemento in testa\n");
         }
         else
         {
             //TODO:check if this is safe enough, or we are risking stuff
             //probabilmente devo geestire tutto un puntatore indietro
-            tmpPointer = sh.queueHead->next;
+
+            tmpPointer = queueHead->next;
+
             while(tmpPointer != NULL)
             {
                 tmpPointer = tmpPointer->next;
@@ -280,13 +285,14 @@ int main(int argc, char* argv[])
             tmpPointer->filename = fileList[i];     //shallow copy is enough
             sh.queueSize++;
         }
-        ec_zero(pthread_cond_signal(&(sh.queueNotEmpty)),"pthread_cond_signal failed with queueNotEmpty");
+        ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
         printf("master ha segnalato su queue not empty\n");
-        ec_zero(pthread_mutex_unlock(&(sh.mtx)),"pthread_mutex_unlock failed with mtx");
+        ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
         printf("master ha lasciato il lock\n");
     }
    
-    ec_zero(pthread_mutex_lock(&(sh.mtx)),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
+    ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
+
     if(flagSIGUSR1)
     {
         sh.masterExitReq = 2;
@@ -310,6 +316,8 @@ int main(int argc, char* argv[])
     }
     free(fileList);
     free(tSlaves);
+
     printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
+
 }

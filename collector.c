@@ -17,7 +17,7 @@
     if((s) != 0) { perror("collector"); exit(EXIT_FAILURE); }
 
 #define SOCKNAME "./farm.sck"
-#define BUFFERSIZE 277
+#define BUFFERSIZE 265
 #define UNIX_PATH_MAX 255
 
 volatile sig_atomic_t flagEndReading= 0;
@@ -40,7 +40,9 @@ void sigusr2_handler(int signum)
 
 int main(int argc, char* argv[])
 {
-	printf("collector avviato con max connessioni = %s\n",argv[1]);//testing
+
+	printf("collector avviato\n");//testing
+
     sigset_t mask;
     //signal handling for sigusr2
     ec_meno1(sigemptyset(&mask),(strerror(errno)));
@@ -77,7 +79,9 @@ int main(int argc, char* argv[])
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
-    //ec_meno1(unlink(SOCKNAME),"collector errore s unlink del socket"); //should make sure the socket file is gone when closing TESTING
+
+    //ec_meno1(unlink(SOCKNAME),(strerror(errno))); //should make sure the socket file is gone when closing TESTING
+
     printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
@@ -85,14 +89,12 @@ int main(int argc, char* argv[])
     if(fdSKT > actualworkers)   actualworkers=fdSKT;
     FD_ZERO(&set);
     FD_SET(fdSKT, &set);
-    printf("collector entra nel suo loop, flagendreading= %d\n",flagEndReading);
+    printf("collector entra nel suo loop\n");
     while(!flagEndReading)
     {
         rdset=set;
-        if(select(actualworkers+1,&rdset,NULL,NULL,NULL)==-1)
-        {
-        perror(strerror(errno));
-        }
+        ec_meno1(select(actualworkers+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
+
         for(fd=0;fd<=actualworkers; fd++)
         {
             if(FD_ISSET(fd,&rdset))
@@ -107,36 +109,34 @@ int main(int argc, char* argv[])
                 }
                 else        //IO socket ready
                 {   
-                    //printf("collector sta per leggere un res\n");
-                    nread=read(fd,buffer,BUFFERSIZE);   //do per scontato che sizeof(long sia 8)
-                    ec_meno1(nread,(strerror(errno)));
-                    if(nread!=0)
-                    {
-                        for(i = nread-2;i>=0;i--)		//-1 sarebbe l'ultimo carattere, che e' null termination
-                        {
-                            if(buffer[i] == '/')    //fine numero
-                            {
-                                arraySize++;
-                                resultArray = realloc(resultArray,arraySize * sizeof(res));
-                                ec_null(resultArray,"collector's realloc for resultArray failed");
 
-                                resultArray[arraySize-1].value = atol(buffer+(i+1));
-                                resultArray[arraySize-1].name = (char*) calloc(i+1,sizeof(char));	//null termination andra' al posto di /
-                                ec_null(resultArray[arraySize - 1].name,"collector calloc failed for file names");
-                                strncpy(resultArray[arraySize-1].name,buffer,i);
-                            }
-                        }
-                        printf("collector sta per mandare un ACK\n");
-            		write(fd,ack,3);
-                    }
-                    else
+                    if(flagEndReading)
                     {
-                    	//printf("collector non ha letto niente\n");      	
+                        break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
                     }
+                    //WIP
+                    memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
+                    while((nread=read(fd,buffer,BUFFERSIZE))!=0)
+                    {
+                        ec_meno1(nread,errno);
+
+                    }
+
+                    arraySize++;
+                    resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
+                    ec_null(resultArray,"collector's realloc for resultArray failed");
+
+                    memset( &(resultArray[arraySize-1].value), buffer+ strlen(buffer) - 8, 8); //value is copied in the structure
+                    resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7,1);
+                    ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
+                    memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
+                    memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
+                    //END WIP
                 }
             }
         }
     }
+
     printf("collector e' fuori dal suo loop\n");
     for(fd=0;fd<=actualworkers;fd++)
     {
@@ -144,6 +144,7 @@ int main(int argc, char* argv[])
     		ec_meno1(close(fd),"fail");
     	}
     }
+
     ec_meno1(close(fdSKT),(strerror(errno)));
     qsort(resultArray,arraySize,sizeof(res),compare);
     for(i=0;i<arraySize;i++)
@@ -155,5 +156,6 @@ int main(int argc, char* argv[])
         free(resultArray[i].name);
     }
     free(resultArray);
+
     ec_meno1(unlink(SOCKNAME),"collector errore s unlink del socket"); //should make sure the socket file is gone when closing TESTING
 }
