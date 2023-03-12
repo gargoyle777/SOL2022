@@ -10,11 +10,11 @@
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("collector"); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror("collector"); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
+    if((s) != 0) { perror("collector"); exit(EXIT_FAILURE); }
 
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 265
@@ -40,7 +40,9 @@ void sigusr2_handler(int signum)
 
 int main(int argc, char* argv[])
 {
+
 	printf("collector avviato\n");//testing
+
     sigset_t mask;
     //signal handling for sigusr2
     ec_meno1(sigemptyset(&mask),(strerror(errno)));
@@ -64,6 +66,7 @@ int main(int argc, char* argv[])
     fd_set set,rdset;
     struct sockaddr_un sa;
 
+	char* ack="ok";
     res *resultArray;
     int arraySize;
 
@@ -76,7 +79,9 @@ int main(int argc, char* argv[])
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
+
     //ec_meno1(unlink(SOCKNAME),(strerror(errno))); //should make sure the socket file is gone when closing TESTING
+
     printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
@@ -89,12 +94,14 @@ int main(int argc, char* argv[])
     {
         rdset=set;
         ec_meno1(select(actualworkers+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
+
         for(fd=0;fd<=actualworkers; fd++)
         {
             if(FD_ISSET(fd,&rdset))
             {
                 if(fd == fdSKT)     //socket connect ready
                 {
+                	printf("collector accettera' una connesione\n");
                     fdC = accept(fdSKT, NULL, 0);
                     ec_meno1(fdC,(strerror(errno)));
                     FD_SET(fdC, &set);
@@ -102,6 +109,7 @@ int main(int argc, char* argv[])
                 }
                 else        //IO socket ready
                 {   
+
                     if(flagEndReading)
                     {
                         break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
@@ -111,6 +119,7 @@ int main(int argc, char* argv[])
                     while((nread=read(fd,buffer,BUFFERSIZE))!=0)
                     {
                         ec_meno1(nread,errno);
+
                     }
 
                     arraySize++;
@@ -127,6 +136,15 @@ int main(int argc, char* argv[])
             }
         }
     }
+
+    printf("collector e' fuori dal suo loop\n");
+    for(fd=0;fd<=actualworkers;fd++)
+    {
+    	if(FD_ISSET(fd,&set)){
+    		ec_meno1(close(fd),"fail");
+    	}
+    }
+
     ec_meno1(close(fdSKT),(strerror(errno)));
     qsort(resultArray,arraySize,sizeof(res),compare);
     for(i=0;i<arraySize;i++)
@@ -138,4 +156,6 @@ int main(int argc, char* argv[])
         free(resultArray[i].name);
     }
     free(resultArray);
+
+    ec_meno1(unlink(SOCKNAME),"collector errore s unlink del socket"); //should make sure the socket file is gone when closing TESTING
 }

@@ -14,20 +14,23 @@
 #include "workerThread.h"
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("worker"); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
     if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
+
 static void cleanup_handler(void* arg)
 {
     free(arg);
 }
 
+
 static void lock_cleanup_handler(void* arg)
 {
     ec_zero(pthread_mutex_unlock(arg),"worker's unlock failed during cleanup");
 }
+
 
 static void target_cleanup_handler(void* arg)
 {
@@ -52,7 +55,7 @@ long fileCalc(char* fileAddress)
     int i=0;
     long result = 0;
     printf("worker sta per accedere a: %s\n",fileAddress);//testing
-    return 0; //testing
+
     file = fopen(fileAddress, "rb"); 
     ec_null(file,(strerror(errno)));
     pthread_cleanup_push(file_cleanup_handler, &file);
@@ -62,7 +65,6 @@ long fileCalc(char* fileAddress)
         i++;
     }
     pthread_cleanup_pop(1); //true per fare il fclose
-    //check if eof or error
     return result;
 }
 
@@ -70,7 +72,9 @@ long fileCalc(char* fileAddress)
 
 void* worker(void* arg)
 {
+
     void* buffer_write;
+
     char charLong[21];
     char *tmpString;
     long result;
@@ -82,9 +86,11 @@ void* worker(void* arg)
     struct queueEl target;
 
     //CONNECT TO THE COLLECTOR
+
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
+
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
     //ready to write and read
 	printf("worker connesso al collector\n");//testing
@@ -104,10 +110,12 @@ void* worker(void* arg)
         	flagwork=0;
 	}
         if(masterExitReq==2)
+
         {
            	printf("worker esce, masterexitreq settato a 2\n");
            	flagwork=0;		//TODO check clean up, for sigusr1
 	}
+
 	if(flagwork==1)
 	{
 		printf("worker cerca di raccogliere l'elemento\n");
@@ -140,6 +148,7 @@ void* worker(void* arg)
     }
     ec_meno1(close(fdSKT),errno);
     pthread_cleanup_pop(0);
+
     pthread_exit((void *) 0);
 }
 
