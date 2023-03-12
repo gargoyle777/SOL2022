@@ -91,13 +91,14 @@ void* worker(void* arg)
     ec_meno1(fdSKT,errno);
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
 
-    pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
+    pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
 	printf("worker connesso al collector\n");//testing
     while(flagwork==1)
     {
         ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
-        pthread_cleanup_push(lock_cleanup_handler, &mtx);
+        pthread_cleanup_push(lock_cleanup_handler, &mtx);       //spingo cleanup per lock
+
         while(queueSize==0 && masterExitReq==0)
         {
         	printf("worker in attesa a causa di lista vuota\n");
@@ -115,38 +116,38 @@ void* worker(void* arg)
            	flagwork=0;		//TODO check clean up, for sigusr1
         }
 
-        if(flagwork==1)
-        {
-            printf("worker cerca di raccogliere l'elemento\n");
-            target = *queueHead;
-            queueHead = queueHead->next;
-            queueSize--; 
-            pthread_cleanup_push(target_cleanup_handler, &target);
-            ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
-            ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
-            pthread_cleanup_pop(0);
-            printf("worker ha lavorato su %s\n",target.filename);
-            result = fileCalc(target.filename);
+        printf("worker cerca di raccogliere l'elemento\n");
+        target = *queueHead;
+        queueHead = queueHead->next;
+        queueSize--; 
+        ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+        ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
-            sprintf(charLong,"%ld",result);
+        pthread_cleanup_pop(0); //tolgo per cleanup del lock
+        pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
+        printf("worker ha lavorato su %s\n",target.filename);
+        result = fileCalc(target.filename);
 
-            //sending the value
-            buffer_write = malloc(strlen(target.filename)+8); 
-            ec_null(buffer_write,"malloc on buffer_write failed in worker");
-            pthread_cleanup_push(cleanup_handler, buffer_write);
+        sprintf(charLong,"%ld",result);
 
-            memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
-            memcpy(&(buffer_write[strlen(tmpString)]), &result,8); 
+        //sending the value
+        buffer_write = malloc(strlen(target.filename)+8); 
+        ec_null(buffer_write,"malloc on buffer_write failed in worker");
+        pthread_cleanup_push(cleanup_handler, buffer_write);        //spingo cleanup per buffer_write
 
-            ec_meno1(write(fdSKT, buffer_write, strlen(buffer_write)),errno);    //now i should write buffer_write
-            //end of sending
+        memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
+        memcpy(&(buffer_write[strlen(tmpString)]), &result,8); 
 
-            pthread_cleanup_pop(1); //true per fare il free del buffer
-            pthread_cleanup_pop(1); //true per fare il free del node
-        }
+        ec_meno1(write(fdSKT, buffer_write, strlen(buffer_write)),errno);    //now i should write buffer_write
+        //end of sending
+
+        pthread_cleanup_pop(1); //tolgo per clean up buffer_write con true
+        pthread_cleanup_pop(1); //tolgo per clean up del target cin true
+
+        //chiudo fdsKT????
         ec_meno1(close(fdSKT),errno);
-        pthread_cleanup_pop(0);
+        pthread_cleanup_pop(0);     //tolgo per clean up del socket
     }
     pthread_exit((void *) 0);
 }
