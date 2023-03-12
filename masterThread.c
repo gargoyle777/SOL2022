@@ -9,6 +9,7 @@
 #include <string.h>
 #include <signal.h>
 #include "workerThread.h"
+
 #define ec_meno1(s,m) \
     if((s) == -1) { perror("master"); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
@@ -19,12 +20,6 @@
 volatile sig_atomic_t flagEndFetching= 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;
 
-struct queueEl *queueHead;
-int queueSize;
-pthread_mutex_t mtx;
-pthread_cond_t queueNotFull;
-pthread_cond_t queueNotEmpty;
-int masterExitReq;
 
 //error handler function
 void handle_sighup(int sig)

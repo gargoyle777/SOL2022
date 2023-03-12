@@ -9,9 +9,10 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
+#include "workerThread.h"
+
 #define UNIX_PATH_MAX 255
 #define SOCKNAME "./farm.sck"
-#include "workerThread.h"
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror("worker"); exit(EXIT_FAILURE); }    
@@ -20,17 +21,22 @@
 #define ec_zero(s,m) \
     if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
+struct queueEl *queueHead=NULL;
+int queueSize=0;
+pthread_mutex_t mtx;
+pthread_cond_t queueNotFull;
+pthread_cond_t queueNotEmpty;
+int masterExitReq=0;
+
 static void cleanup_handler(void* arg)
 {
     free(arg);
 }
 
-
 static void lock_cleanup_handler(void* arg)
 {
     ec_zero(pthread_mutex_unlock(arg),"worker's unlock failed during cleanup");
 }
-
 
 static void target_cleanup_handler(void* arg)
 {
@@ -72,7 +78,6 @@ long fileCalc(char* fileAddress)
 
 void* worker(void* arg)
 {
-
     char* buffer_write;
     int flagwork=1;
     char charLong[21];
