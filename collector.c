@@ -126,8 +126,8 @@ int main(int argc, char* argv[])
                     resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
                     ec_null(resultArray,"collector's realloc for resultArray failed");
 
-                    memset( &(resultArray[arraySize-1].value), buffer+ strlen(buffer) - 8, 8); //value is copied in the structure
-                    resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7,1);
+                    memset( &(resultArray[arraySize-1].value), &(buffer[strlen(buffer)- 8]) , 8); //value is copied in the structure
+                    resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7);
                     ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
                     memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
                     memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
