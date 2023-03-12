@@ -2,7 +2,6 @@
 #ifndef WORKERTHREAD_H_
 #define WORKERTHREAD_H_
 
-
 struct queueEl
 {
     char *filename;

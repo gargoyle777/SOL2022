@@ -12,15 +12,13 @@
 #define UNIX_PATH_MAX 255
 #define SOCKNAME "./farm.sck"
 #include "workerThread.h"
+
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
     if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
-
-typedef struct arguments workerArgs;
-
 static void cleanup_handler(void* arg)
 {
     free(arg);
@@ -39,25 +37,24 @@ static void target_cleanup_handler(void* arg)
 
 static void socket_cleanup_handler(void* arg)
 {
-    ec_meno1(close(*((int*) arg)),errno);
+    ec_meno1(close(*((int*) arg)),(strerror(errno)));
 }
 
 static void file_cleanup_handler(void *arg)
 {
-    ec_zero(fclose(*(FILE**)arg),errno);
+    ec_zero(fclose(*(FILE**)arg),(strerror(errno)));
 }
 
 long fileCalc(char* fileAddress)
 {
     FILE *file;
-    struct stat st;
     long tmp;
     int i=0;
     long result = 0;
-    ec_meno1(stat(fileAddress, &st),errno);
-    
+    printf("worker sta per accedere a: %s\n",fileAddress);//testing
+    return 0; //testing
     file = fopen(fileAddress, "rb"); 
-    ec_null(file,errno);
+    ec_null(file,(strerror(errno)));
     pthread_cleanup_push(file_cleanup_handler, &file);
     while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
     {
@@ -90,30 +87,42 @@ void* worker(void* arg)
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
     //ready to write and read
-
-    while(1)
+	printf("worker connesso al collector\n");//testing
+    while(flagwork==1)
     {
-        ec_zero(pthread_mutex_lock(mtx),"worker's lock failed");
+        ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
         pthread_cleanup_push(lock_cleanup_handler, &mtx);
         while(queueSize==0 && masterExitReq==0)
         {
+        	printf("worker in attesa a causa di lista vuota\n");
             ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
         }
-        if (queueSize ==0) break;  //TODO check if clean up is done anyway
+        printf("worker fuori dal loop con wait, queuesize= %d\n",queueSize);
+        if(queueSize ==0)
+        {
+        	printf("worker esce, 0 elementi nella e masterexitreq settato\n");
+        	flagwork=0;
+	}
+        if(masterExitReq==2)
+        {
+           	printf("worker esce, masterexitreq settato a 2\n");
+           	flagwork=0;		//TODO check clean up, for sigusr1
+	}
+	if(flagwork==1)
+	{
+		printf("worker cerca di raccogliere l'elemento\n");
+		target = *queueHead;
+		queueHead = queueHead->next;
+		queueSize--; 
+		pthread_cleanup_push(target_cleanup_handler, &target);
+		ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+		ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
-        if(masterExitReq==2)   break; //TODO check clean up, for sigusr1
+		pthread_cleanup_pop(0);
+		printf("worker ha lavorato su %s\n",target.filename);
+		result = fileCalc(target.filename);
 
-        target = *queueHead;
-        queueHead = queueHead->next;
-        queueSize--; 
-        pthread_cleanup_push(target_cleanup_handler, &target);
-        ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
-        ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
-
-        pthread_cleanup_pop(0);
-        result = fileCalc(target.filename);
-
-        sprintf(charLong,"%ld",result);
+		sprintf(charLong,"%ld",result);
 
         //sending the value
         buffer_write = malloc(strlen(target.filename)+8); 
