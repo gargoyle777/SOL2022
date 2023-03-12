@@ -19,6 +19,13 @@
 volatile sig_atomic_t flagEndFetching= 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;
 
+struct queueEl *queueHead;
+int queueSize;
+pthread_mutex_t mtx;
+pthread_cond_t queueNotFull;
+pthread_cond_t queueNotEmpty;
+int masterExitReq;
+
 //error handler function
 void handle_sighup(int sig)
 {
@@ -249,16 +256,16 @@ int main(int argc, char* argv[])
 	printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
     for(i=0;i<sizeFileList;i++)
     {
-        ec_zero(pthread_mutex_lock(&(sh.mtx)),"pthread_mutex_lock failed with mtx");
-        while(sh.queueSize>=qlen)  //full queue
+        ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
+        while(queueSize>=qlen)  //full queue
         {
-            ec_zero(pthread_cond_wait(&(sh.queueNotFull),&(sh.mtx)),"pthread_cond_wait failed on queueNotFull");
+            ec_zero(pthread_cond_wait(&(queueNotFull),&(mtx)),"pthread_cond_wait failed on queueNotFull");
         }
         if(flagEndFetching)     //setted
         {
             break;
         }
-        if(sh.queueSize == 0)
+        if(queueSize == 0)
         {
         	printf("master inizia a mettere un elemento in testa\n");
 
@@ -283,7 +290,7 @@ int main(int argc, char* argv[])
             tmpPointer = malloc(1*sizeof(struct queueEl));
             ec_null(tmpPointer,"malloc of an element of the queue failed");
             tmpPointer->filename = fileList[i];     //shallow copy is enough
-            sh.queueSize++;
+            queueSize++;
         }
         ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
         printf("master ha segnalato su queue not empty\n");
@@ -295,14 +302,14 @@ int main(int argc, char* argv[])
 
     if(flagSIGUSR1)
     {
-        sh.masterExitReq = 2;
+        masterExitReq = 2;
         kill(pid,SIGUSR2);
     }
     else{
-        sh.masterExitReq = 1;
+        masterExitReq = 1;
     }
-    ec_zero(pthread_cond_broadcast(&(sh.queueNotEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
-    ec_zero(pthread_mutex_unlock(&(sh.mtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
+    ec_zero(pthread_cond_broadcast(&(queueNotEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
+    ec_zero(pthread_mutex_unlock(&(mtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
 
     for(i=0; i<nthread;i++)
     {
