@@ -1,4 +1,5 @@
 //TODO: check for error when accessing the array
+//TODO: clean the queue if masterExitReq=2
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
