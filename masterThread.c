@@ -48,52 +48,40 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
-void directoryDigger(char* dir, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
+void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
 {
-    DIR* oDir;
-    struct dirent* rDir;
+    DIR* openedDir;
+    struct dirent* freshDir;
+    char* tmpString[256];
     printf("scavo in una directory\n"); //testing
-    if (access(dir, F_OK) == 0) //file exist
+
+    errno = 0;
+    ec_null(openedDir = opendir(path),"opendir failed ");
+
+    while ((freshDir=readdir(openedDir)) != NULL) 
     {
-        errno = 0;
-        oDir = opendir(dir);
-        if( oDir == NULL)     //file exist but its not a directory
-        {   
-            if(errno == ENOTDIR)        //not a directory
-            {
-            (* fileListSize) ++;
-                *fileList = realloc(*fileList,(* fileListSize) * sizeof(char*));
-                ec_null(*fileList,"realloc fallita, fileList non allocata");
-                *fileList[(* fileListSize) - 1] = calloc(strlen(dir) +1, sizeof(char));
-                ec_null(*fileList[(* fileListSize) - 1],"calloc fallita, elemento di fileList non allocato");
-                strcpy(*fileList[(* fileListSize) - 1], dir); 
-                printf("testing0\n");//testing
-                printf("%s\n",dir); //testing
-            }       
-            else        //another type of error
-            {
-                perror(strerror(errno));
-            }  
-        }
-        else        //file exist and its a directory or different type of error
+        memset(tmpString,0,strlen(tmpString));
+        memcpy(tmpString,path,strlen(path));
+        tmpString[strlen(path)] = '/';
+        memcpy(&(tmpString[strlen(path) +1 ]),freshDir->d_name,strlen(freshDir->d_name));
+        if(freshDir->d_type == DT_DIR)
         {
-            errno = 0;
-            while( (NULL!= (rDir = readdir(oDir))) )
-            {
-                directoryDigger(rDir->d_name, fileList, fileListSize);
-                //Check errno
-            }
-            if(errno == 0)  //TODO should close in any case
-            {
-                closedir(oDir);
-            }
-            
+            directoryDigger(tmpString,fileList,fileListSize);            
         }
-    } 
-    else 
-    {
-        perror(strerror(errno));
+        else if(freshDir->d_type == DT_REG)
+        {
+            (* fileListSize) ++;
+            *fileList = realloc(*fileList,(* fileListSize) * sizeof(char*));
+            ec_null(*fileList,"realloc fallita, fileList non allocata");
+            *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
+            ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
+            strcpy(*fileList[(* fileListSize) - 1], tmpString); 
+            printf("testing0\n");//testing
+            printf("%s\n",freshDir); //testing
+        }
     }
+    errno=0;
+    ec_meno1(closedir(openedDir),"failure on close dir");
 }
 
 int main(int argc, char* argv[])
