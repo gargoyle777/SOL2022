@@ -73,8 +73,8 @@ long fileCalc(char* fileAddress)
 void* worker(void* arg)
 {
 
-    void* buffer_write;
-
+    char* buffer_write;
+    int flagwork=1;
     char charLong[21];
     char *tmpString;
     long result;
@@ -108,47 +108,46 @@ void* worker(void* arg)
         {
         	printf("worker esce, 0 elementi nella e masterexitreq settato\n");
         	flagwork=0;
-	}
+	    }
         if(masterExitReq==2)
-
         {
            	printf("worker esce, masterexitreq settato a 2\n");
            	flagwork=0;		//TODO check clean up, for sigusr1
-	}
+        }
 
-	if(flagwork==1)
-	{
-		printf("worker cerca di raccogliere l'elemento\n");
-		target = *queueHead;
-		queueHead = queueHead->next;
-		queueSize--; 
-		pthread_cleanup_push(target_cleanup_handler, &target);
-		ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
-		ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
+        if(flagwork==1)
+        {
+            printf("worker cerca di raccogliere l'elemento\n");
+            target = *queueHead;
+            queueHead = queueHead->next;
+            queueSize--; 
+            pthread_cleanup_push(target_cleanup_handler, &target);
+            ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+            ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
 
-		pthread_cleanup_pop(0);
-		printf("worker ha lavorato su %s\n",target.filename);
-		result = fileCalc(target.filename);
+            pthread_cleanup_pop(0);
+            printf("worker ha lavorato su %s\n",target.filename);
+            result = fileCalc(target.filename);
 
-		sprintf(charLong,"%ld",result);
+            sprintf(charLong,"%ld",result);
 
-        //sending the value
-        buffer_write = malloc(strlen(target.filename)+8); 
-        ec_null(buffer_write,"malloc on buffer_write failed in worker");
-        pthread_cleanup_push(cleanup_handler, buffer_write);
+            //sending the value
+            buffer_write = malloc(strlen(target.filename)+8); 
+            ec_null(buffer_write,"malloc on buffer_write failed in worker");
+            pthread_cleanup_push(cleanup_handler, buffer_write);
 
-        memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
-        memcpy(&(buffer_write[strlen(tmpString)]), result,8); 
+            memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
+            memcpy(&(buffer_write[strlen(tmpString)]), &result,8); 
 
-        ec_meno1(write(fdSKT, buffer_write, messageLength),errno);    //now i should write buffer_write
-        //end of sending
+            ec_meno1(write(fdSKT, buffer_write, strlen(buffer_write)),errno);    //now i should write buffer_write
+            //end of sending
 
-        pthread_cleanup_pop(1); //true per fare il free del buffer
-        pthread_cleanup_pop(1); //true per fare il free del node
+            pthread_cleanup_pop(1); //true per fare il free del buffer
+            pthread_cleanup_pop(1); //true per fare il free del node
+        }
+        ec_meno1(close(fdSKT),errno);
+        pthread_cleanup_pop(0);
     }
-    ec_meno1(close(fdSKT),errno);
-    pthread_cleanup_pop(0);
-
     pthread_exit((void *) 0);
 }
 
