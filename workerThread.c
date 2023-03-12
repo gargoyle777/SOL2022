@@ -145,10 +145,10 @@ void* worker(void* arg)
         pthread_cleanup_pop(1); //tolgo per clean up buffer_write con true
         pthread_cleanup_pop(1); //tolgo per clean up del target cin true
 
-        //chiudo fdsKT????
-        ec_meno1(close(fdSKT),errno);
-        pthread_cleanup_pop(0);     //tolgo per clean up del socket
     }
+    //chiudo fdsKT???? 
+    ec_meno1(close(fdSKT),errno);
+    pthread_cleanup_pop(0);     //tolgo per clean up del socket
     pthread_exit((void *) 0);
 }
 
