@@ -86,8 +86,10 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
 
 int main(int argc, char* argv[])
 {
-		printf("sto iniziando il main\n");//testing
+	printf("sto iniziando il main\n");//testing
 
+    char baseDir[256];
+    ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
     //for masking
     sigset_t set;
     struct sigaction sa;
@@ -188,9 +190,12 @@ int main(int argc, char* argv[])
                 	fileList = realloc(fileList, sizeFileList * sizeof(char*));
                 	ec_null(fileList,"realloc fallita, fileList non allocata");
                 }
-                fileList[sizeFileList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
-                ec_null(fileList[sizeFileList - 1] ,"calloc fallita, elemento di fileList non allocato");
-                strcpy(fileList[sizeFileList - 1], argv[ac]);
+                fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) + strlen(baseDir)+1);
+                ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
+
+                memcpy(fileList[sizeFileList - 1],baseDir,strlen(baseDir));
+                fileList[sizeFileList - 1][strlen(baseDir)] ='/';
+                memcpy((fileList[sizeFileList-1][strlen(baseDir)+1]),argv[ac],strlen(argv[ac]));
                 printf("%s\n",argv[ac]); //testing
             }
         }
