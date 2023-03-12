@@ -17,7 +17,7 @@
     if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
 #define SOCKNAME "./farm.sck"
-#define BUFFERSIZE 277
+#define BUFFERSIZE 265
 #define UNIX_PATH_MAX 255
 
 volatile sig_atomic_t flagEndReading= 0;
@@ -102,24 +102,23 @@ int main(int argc, char* argv[])
                     {
                         break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
                     }
-                    nread=read(fd,buffer,BUFFERSIZE);   //do per scontato che sizeof(long sia 8)
-                    ec_meno1(nread,errno);
-                    if(nread!=0)
+                    //WIP
+                    memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
+                    while((nread=read(fd,buffer,BUFFERSIZE))!=0)
                     {
-                        for(i = nread-1;i>=0;i--)
-                        {
-                            if(buffer[i] == '/')    //fine numero
-                            {
-                                arraySize++;
-                                resultArray = realloc(resultArray,arraySize * sizeof(res));
-                                ec_null(resultArray,"collector's realloc for resultArray failed");
-
-                                resultArray[arraySize-1].value = atol(buffer+(i+1));
-                                resultArray[arraySize-1].name = (char*) calloc(i+1,sizeof(1));
-                                ec_null(resultArray[arraySize - 1].name,"collector calloc failed for file names");
-                            }
-                        }
+                        ec_meno1(nread,errno);
                     }
+
+                    arraySize++;
+                    resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
+                    ec_null(resultArray,"collector's realloc for resultArray failed");
+
+                    memset( &(resultArray[arraySize-1].value), buffer+ strlen(buffer) - 8, 8); //value is copied in the structure
+                    resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7,1);
+                    ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
+                    memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
+                    memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
+                    //END WIP
                 }
             }
         }

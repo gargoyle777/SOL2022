@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,7 +47,7 @@ static void file_cleanup_handler(void *arg)
     ec_zero(fclose(*(FILE**)arg),errno);
 }
 
-static long fileCalc(char* fileAddress)
+long fileCalc(char* fileAddress)
 {
     FILE *file;
     struct stat st;
@@ -68,8 +69,11 @@ static long fileCalc(char* fileAddress)
     return result;
 }
 
+
+
 void* worker(void* arg)
 {
+    void* buffer_write;
     char charLong[21];
     char *tmpString;
     long result;
@@ -81,7 +85,7 @@ void* worker(void* arg)
     struct queueEl target;
 
     //CONNECT TO THE COLLECTOR
-    fdSKT = socket(AF_UNIX,SOCK_STREAM, 0);
+    fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
@@ -111,14 +115,18 @@ void* worker(void* arg)
 
         sprintf(charLong,"%ld",result);
 
-        tmpString = calloc( (strlen(target.filename)+strlen(charLong)+2),sizeof(char));
-        ec_null(tmpString,"calloc on tmpString failed in worker");
-        pthread_cleanup_push(cleanup_handler, tmpString);
-        strcat(tmpString,target.filename);
-        strcat(tmpString,"/");
-        strcat(tmpString,charLong);
-        ec_meno1(write(fdSKT, tmpString, strlen(tmpString)),errno);    
-        pthread_cleanup_pop(1); //true per fare il free della stringa
+        //sending the value
+        buffer_write = malloc(strlen(target.filename)+8); 
+        ec_null(buffer_write,"malloc on buffer_write failed in worker");
+        pthread_cleanup_push(cleanup_handler, buffer_write);
+
+        memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
+        memcpy(&(buffer_write[strlen(tmpString)]), result,8); 
+
+        ec_meno1(write(fdSKT, buffer_write, messageLength),errno);    //now i should write buffer_write
+        //end of sending
+
+        pthread_cleanup_pop(1); //true per fare il free del buffer
         pthread_cleanup_pop(1); //true per fare il free del node
     }
     ec_meno1(close(fdSKT),errno);
