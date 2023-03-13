@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     {
         rdset=set;
         ec_meno1(select(actualworkers+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
-
+        printf("collector sopravvissuto al select\n");
         for(fd=0;fd<=actualworkers; fd++)
         {
             if(FD_ISSET(fd,&rdset))

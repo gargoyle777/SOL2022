@@ -195,8 +195,8 @@ int main(int argc, char* argv[])
 
                 memcpy(fileList[sizeFileList - 1],baseDir,strlen(baseDir));
                 fileList[sizeFileList - 1][strlen(baseDir)] ='/';
-                memcpy((fileList[sizeFileList-1][strlen(baseDir)+1]),argv[ac],strlen(argv[ac]));
-                printf("%s\n",argv[ac]); //testing
+                memcpy(&(fileList[sizeFileList-1][strlen(baseDir)+1]),argv[ac],strlen(argv[ac]));
+                printf("%s\n",fileList[sizeFileList - 1]); //testing
             }
         }
     }
