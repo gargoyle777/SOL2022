@@ -112,17 +112,24 @@ void* worker(void* arg)
         }
         
         printf("worker fuori dal loop con wait, queuesize= %d\n",queueSize);
-        if(queueSize ==0)
+
+        if(queueSize==0)
         {
         	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato\n");
             pthread_exit((void *) 0);
 	    }
+
         if(masterExitReq==2)
         {
            	printf("worker esce, masterexitreq settato a 2\n");
            	pthread_exit((void *) 0);
         }
 
+        if(masterExitReq==1 && queueSize>0)
+        {
+            printf("worker fa un ultimo giro\n");
+            flagwork=0;
+        }
 
         printf("worker cerca di raccogliere l'elemento\n");
         target = *queueHead;
