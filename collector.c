@@ -47,14 +47,12 @@ int main(int argc, char* argv[])
     //signal handling for sigusr2
     ec_meno1(sigemptyset(&mask),(strerror(errno)));
     ec_meno1(sigaddset(&mask, SIGUSR2),(strerror(errno)));
-
     ec_meno1(sigprocmask(SIG_BLOCK, &mask, NULL),(strerror(errno)));
     struct sigaction siga;
     siga.sa_handler = sigusr2_handler;
     ec_meno1(sigemptyset(&siga.sa_mask),(strerror(errno)));
     siga.sa_flags = 0;
     ec_meno1(sigaction(SIGUSR2, &siga, NULL),(strerror(errno)));
-
     ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),(strerror(errno)));
 
     int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number

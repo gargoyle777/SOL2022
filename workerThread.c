@@ -1,3 +1,5 @@
+//CHECK HOW FLAGWORK IS SET TO 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,11 +17,11 @@
 #define SOCKNAME "./farm.sck"
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker"); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("worker"); pthread_exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror(m); pthread_exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
+    if((s) != 0) { perror(m); pthread_exit(EXIT_FAILURE); }
 
 struct queueEl *queueHead=NULL;
 int queueSize=0;
@@ -74,8 +76,6 @@ long fileCalc(char* fileAddress)
     return result;
 }
 
-
-
 void* worker(void* arg)
 {
     char* buffer_write;
@@ -95,7 +95,7 @@ void* worker(void* arg)
 
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
-    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
+    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno);
 
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
@@ -115,14 +115,12 @@ void* worker(void* arg)
         if(queueSize ==0)
         {
         	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato\n");
-        	flagwork=0;
-            break; //tmp , code it better
+            pthread_exit((void *) 0);
 	    }
         if(masterExitReq==2)
         {
            	printf("worker esce, masterexitreq settato a 2\n");
-           	flagwork=0;		//TODO check clean up, for sigusr1
-            break;  //tmp, code it better
+           	pthread_exit((void *) 0);
         }
 
 
