@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),(strerror(errno)));
 
     int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number
-    int actualworkers = 0;
+    int maxFD = 0;
     int i = 0; //counter
     int fdSKT;
     int fdC; 
@@ -66,7 +66,8 @@ int main(int argc, char* argv[])
     fd_set set,rdset;
     struct sockaddr_un sa;
 
-	char* ack="ok";
+    int *allWorkersFd;
+	char* ack="ACK";
     res *resultArray;
     int arraySize;
 
@@ -74,6 +75,13 @@ int main(int argc, char* argv[])
     char buffer[BUFFERSIZE];
     long tmplong;
     char *tmpname;
+
+    ec_null(allWorkersFd = malloc(maxworkers*sizeof(int)),"failed to malloc allWorkersFd");
+    
+    for(int c=0;c<maxworkers;c++)   //init to -1
+    {
+        allWorkersFd[c]=-1;
+    }
 
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
@@ -86,66 +94,74 @@ int main(int argc, char* argv[])
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
     ec_meno1(listen(fdSKT, maxworkers),(strerror(errno))); //somaxconn should be set on worker number
-    if(fdSKT > actualworkers)   actualworkers=fdSKT;
-    FD_ZERO(&set);
-    FD_SET(fdSKT, &set);
+    if(fdSKT > maxFD)   maxFD=fdSKT;
     printf("collector entra nel suo loop\n");
     while(!flagEndReading)
     {
-        rdset=set;
-        ec_meno1(select(actualworkers+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
-        printf("collector sopravvissuto al select\n");
-        for(fd=0;fd<=actualworkers; fd++)
+        FD_ZERO(&rdset);
+        if(numworkers < maxworkers) FD_SET(fdSKT,&rdset);
+        for(int c=0;c<maxworkers;c++)
         {
-            if(FD_ISSET(fd,&rdset))
+            if(allWorkersFd[c] > -1)    FD_SET(allWorkersFd[c],&rdset);
+        }
+
+        ec_meno1(select(maxFD+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
+        printf("collector sopravvissuto al select\n");
+
+        if(FD_ISSET(fdSKT)) //socket connect ready
+        {
+            printf("collector accettera' una connesione\n");
+            fdC = accept(fdSKT, NULL, 0);
+            ec_meno1(fdC,(strerror(errno)));
+            for(int c=0;c<maxworkers;c++)
             {
-                if(fd == fdSKT)     //socket connect ready
+                if(allWorkersFd[c]==-1)
                 {
-                	printf("collector accettera' una connesione\n");
-                    fdC = accept(fdSKT, NULL, 0);
-                    ec_meno1(fdC,(strerror(errno)));
-                    FD_SET(fdC, &set);
-                    if(fdC>actualworkers)   actualworkers=fdC;
+                    allWorkersFd[c] = fdC;
+                    c=maxworkers; 
                 }
-                else        //IO socket ready
-                {   
-
-                    if(flagEndReading)
-                    {
-                        break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
-                    }
-                    //WIP
-                    memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
-                    while((nread=read(fd,buffer,BUFFERSIZE))!=0)
-                    {
-                        ec_meno1(nread,errno);
-
-                    }
-
-                    arraySize++;
-                    resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
-                    ec_null(resultArray,"collector's realloc for resultArray failed");
-
-                    memcpy( &(resultArray[arraySize-1].value), &(buffer[strlen(buffer)- 8]) , 8); //value is copied in the structure
-                    resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7);
-                    ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
-                    memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
-                    memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
-                    //END WIP
+            }
+            if(fdC > maxFD)   maxFD=fdC;
+        }
+        for(int c=0;c<maxworkers;c++)
+        {
+            if(flagEndReading)
+            {
+                break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
+            }
+            if(FD_ISSET(allWorkersFd[c],&rdset))
+            {
+                memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
+                while((nread=read(fd,buffer,BUFFERSIZE))!=0)
+                {
+                    ec_meno1(nread,errno);
                 }
+
+                arraySize++;
+                resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
+                ec_null(resultArray,"collector's realloc for resultArray failed");
+
+                memcpy( &(resultArray[arraySize-1].value), &(buffer[strlen(buffer)- 8]) , 8); //value is copied in the structure
+                resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7);
+                ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
+                memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
+                memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
+                printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
+
+                //start ack
+                ec_meno1(write(fdSKT, ack, strlen(ack)),errno);    
+                printf("collector ha risposto %s",ack);
             }
         }
     }
 
     printf("collector e' fuori dal suo loop\n");
-    for(fd=0;fd<=actualworkers;fd++)
+    for(int c=0;c<maxworkers;c++)
     {
-    	if(FD_ISSET(fd,&set)){
-    		ec_meno1(close(fd),"fail");
-    	}
+        if(allWorkersFd[c]!=-1) ec_meno1(close(allWorkersFd[c]),"collecotr failed to close a socket with a worker");
     }
 
-    ec_meno1(close(fdSKT),(strerror(errno)));
+    ec_meno1(close(fdSKT),("collecotr failed to close the socket for accepting connection"));
     qsort(resultArray,arraySize,sizeof(res),compare);
     for(i=0;i<arraySize;i++)
     {
@@ -156,6 +172,6 @@ int main(int argc, char* argv[])
         free(resultArray[i].name);
     }
     free(resultArray);
-
-    ec_meno1(unlink(SOCKNAME),"collector errore s unlink del socket"); //should make sure the socket file is gone when closing TESTING
+    free(allWorkersFd)
+    ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
 }
