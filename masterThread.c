@@ -48,7 +48,7 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
-void checked_realloc(void **ptr, size_t size)
+void checked_realloc(char **ptr, size_t size)
 {
     errno=0;
     if(*ptr==NULL) *ptr=malloc(size);
@@ -79,7 +79,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
         else if(freshDir->d_type == DT_REG)
         {
             (* fileListSize) ++;
-            checked_realloc(fileList,(* fileListSize) * sizeof(char*));
+            checked_realloc((char**) fileList,(* fileListSize) * sizeof(char*));
             *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
             ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
             strcpy(*fileList[(* fileListSize) - 1], tmpString); 
