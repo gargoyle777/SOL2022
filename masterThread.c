@@ -51,9 +51,18 @@ void handle_sigusr1(int sig)
 void checked_realloc(char ***ptr, int length, size_t size)
 {
     errno=0;
-    if(length==0) *ptr=malloc(length*size);
-    else *ptr=realloc(*ptr, length*size);
+    if(length==0) 
+    {
+        printf("provo malloc \n");
+        *ptr=malloc(length*size);
+    }
+    else 
+    {
+        printf("provo realloc \n");
+        *ptr=realloc(*ptr, length*size);
+    }
     ec_null(*ptr,"checked_realloc fallita");
+    printf("riuscita\n");
 }
 
 void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
