@@ -10,7 +10,7 @@
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("collector ec_meno1"); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror("collector ec_null"); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
                 printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
 
                 //start ack
-                ec_meno1(write(fdSKT, ack, strlen(ack)),errno);    
+                ec_meno1(write(fdSKT, ack, strlen(ack)),"write fallita");    
                 printf("collector ha risposto %s",ack);
             }
         }
