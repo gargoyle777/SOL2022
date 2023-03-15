@@ -81,6 +81,7 @@ long fileCalc(char* fileAddress)
 
 void* worker(void* arg)
 {
+    printf("worker avviato\n");
     char* buffer_write;
     int flagwork=1;
     char charLong[21];
