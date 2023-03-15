@@ -51,7 +51,7 @@ void handle_sigusr1(int sig)
 void checked_realloc(char ***ptr, int length, size_t size)
 {
     errno=0;
-    if(length==0) 
+    if(length==1) 
     {
         printf("provo malloc \n");
         *ptr=malloc(length*size);
