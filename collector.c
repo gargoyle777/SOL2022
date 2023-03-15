@@ -10,7 +10,8 @@
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror(m); }    
+
 #define ec_null(s,m) \
     if((s) == NULL) { perror("collector ec_null"); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
