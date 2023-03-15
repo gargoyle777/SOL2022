@@ -197,16 +197,18 @@ int main(int argc, char* argv[])
                 do
                 {
                     errno=0;
+                    nread=0;
                     nread=read(fd,buffer,BUFFERSIZE);
                     if (nread==-1)
                     {
+                        printf("collector read ha dato errore");
                         close(allWorkersFd[c]);
                         allWorkersFd[c]=-1; //close the socket with him
                         break;
                     }
                     printf("collector ha letto %d a questo giro, %d in totale",nread,accumulator );
                     accumulator+=nread;
-                } while (accumulator<265 && nread>0);
+                } while (accumulator<265);
                 printf("collector survived read\n");
                 arraySize++;
                 checked_realloc(&resultArray,arraySize, sizeof(res));     //realloc for result array
@@ -217,7 +219,7 @@ int main(int argc, char* argv[])
                 ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
                 memset(resultArray[arraySize - 1].name, 0, strlen(buffer)+1);   //name is zeroed
                 memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer));        //name is saved in the structure
-                printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
+                printf("collector ha raccolto <%s>",resultArray[arraySize - 1].name);
 
                 //start ack
                 ec_meno1(write(allWorkersFd[c], ack, 4),"collector morto per write fallita");    
