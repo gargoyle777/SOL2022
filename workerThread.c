@@ -99,6 +99,7 @@ void* worker(void* arg)
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
 	printf("worker connesso al collector\n");//testing
+    
     while(flagwork==1)
     {
         ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
@@ -133,8 +134,6 @@ void* worker(void* arg)
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
         printf("worker ha lavorato su %s\n",target.filename);
         result = fileCalc(target.filename);
-
-        sprintf(charLong,"%ld",result);
 
         //sending the value
         buffer_write = malloc(strlen(target.filename)+8); 

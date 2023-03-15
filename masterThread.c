@@ -48,6 +48,13 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
+void* checked_realloc(void *ptr, size_t size)
+{
+    errno =0;
+    if(ptr==NULL) return ptr=malloc(size);
+    else return ptr=realloc(ptr,size);
+}
+
 void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
 {
     DIR* openedDir;
@@ -71,7 +78,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
         else if(freshDir->d_type == DT_REG)
         {
             (* fileListSize) ++;
-            *fileList = realloc(*fileList,(* fileListSize) * sizeof(char*));
+            *fileList = checked_realloc(*fileList,(* fileListSize) * sizeof(char*));
             ec_null(*fileList,"realloc fallita, fileList non allocata");
             *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
             ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
@@ -169,7 +176,7 @@ int main(int argc, char* argv[])
             if(dirFlag)
             {
                 sizeDirList ++;
-                dirList = realloc(dirList,sizeDirList * sizeof(char*));
+                dirList = checked_realloc(dirList,sizeDirList * sizeof(char*));
                 ec_null(dirList,"realloc fallita, dirList non allocata");
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 ec_null(dirList[sizeDirList - 1] ,"calloc fallita, elemento di dirList non allocato");
@@ -180,16 +187,9 @@ int main(int argc, char* argv[])
             {
             	printf("file trovato nell'argomento %d\n",ac); //testing
                 sizeFileList ++;
-                if(sizeFileList==1)
-                {
-                	fileList = malloc(sizeof(char*));
-                	ec_null(fileList,"malloc fallita, fileList non allocata");
-                }
-                else
-                {
-                	fileList = realloc(fileList, sizeFileList * sizeof(char*));
-                	ec_null(fileList,"realloc fallita, fileList non allocata");
-                }
+
+                fileList = checked_realloc(fileList, sizeFileList * sizeof(char*));
+                ec_null(fileList,"realloc fallita, fileList non allocata");
                 fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) + strlen(baseDir)+1);
                 ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
 
