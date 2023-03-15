@@ -133,7 +133,7 @@ void* worker(void* arg)
             ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
         }
         
-        printf("worker fuori dal loop con wait, queuesize= %d\n",queueSize);
+        printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
 
         if(queueSize==0)
         {

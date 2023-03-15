@@ -10,11 +10,11 @@
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("collector"); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("collector ec_meno1"); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror("collector"); exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror("collector ec_null"); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror("collector"); exit(EXIT_FAILURE); }
+    if((s) != 0) { perror("collector ec_zero"); exit(EXIT_FAILURE); }
 
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 265
@@ -126,12 +126,14 @@ int main(int argc, char* argv[])
         }
         for(c=0;c<maxworkers;c++)
         {
+            printf("collector fa il check del file descriptor %d\n",c);
             if(flagEndReading)
             {
                 break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
             }
             if(FD_ISSET(allWorkersFd[c],&rdset))
             {
+                printf("collector si prepara a leggere dal file descriptor %d\n",c);
                 memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
                 while((nread=read(fd,buffer,BUFFERSIZE))!=0)
                 {
