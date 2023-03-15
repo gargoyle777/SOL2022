@@ -232,8 +232,10 @@ int main(int argc, char* argv[])
 
     for(i=0; i<sizeDirList; i++)
     {
-        free( dirList[i]);
+        prtinf("faccio il free di %s\n",dirList[i]);
+        free(dirList[i]);
     }
+    prtinf("faccio il free di dir list\n");
     free(dirList);
     
     //END of directory exploration
