@@ -34,10 +34,6 @@ pthread_cond_t queueNotFull;
 pthread_cond_t queueNotEmpty;
 int masterExitReq=0;
 
-static void cleanup_handler(void* arg)
-{
-    free(arg);
-}
 
 static void lock_cleanup_handler(void* arg)
 {
@@ -83,6 +79,8 @@ long fileCalc(char* fileAddress)
 void* worker(void* arg)
 {
     printf("worker avviato\n");
+    int accums;
+    int bytesWritten=0;
     char buffer_write[265];
     int flagwork=1;
     char charLong[21];
@@ -138,7 +136,7 @@ void* worker(void* arg)
 
         if(queueSize==0)
         {
-        	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato\n");
+        	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato a 1\n");
             pthread_exit(&retValue);
 	    }
 
@@ -171,19 +169,27 @@ void* worker(void* arg)
         memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
         memcpy(&(buffer_write[257]), &result,8); 
 
-        ec_meno1(write(fdSKT, buffer_write, BUFFERSIZE),errno);    //now i should write buffer_write
+        bytesWritten=0;
+        accums=0;
+        do{
+            errno=0;
+            ec_meno1(accums=write(fdSKT, buffer_write, BUFFERSIZE),errno); 
+            bytesWritten+=accums;
+            printf("workes ha scritto %d/265",bytesWritten);
+        }while(accums<BUFFERSIZE);  
         //end of sending
 
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
 
         nread=0;
+        accums=0;
         memset(ackHolder,0,4);
         do
         {
             errno=0;
-            nread=read(fd,ackHolder,4);
-            ec_meno1(nread,errno);
-        } while(nread!=0);
+            ec_meno1(nread=read(fd,ackHolder,4),"worker dead on ack reading");
+            accums+=nread;
+        } while(accums<4);
 
     }
     //chiudo fdsKT???? 

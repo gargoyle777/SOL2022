@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 
     int numworkers=0;
     int *allWorkersFd;
-	char* ack="ACK";
+	char ack[4]="ACK";
     res *resultArray;
     int arraySize;
 
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
                 printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
 
                 //start ack
-                ec_meno1(write(fdSKT, ack, strlen(ack)),"collector morto per write fallita");    
+                ec_meno1(write(fdSKT, ack, 4),"collector morto per write fallita");    
                 printf("collector ha risposto %s",ack);
             }
         }
