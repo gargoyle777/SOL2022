@@ -65,6 +65,8 @@ void checked_realloc(char ***ptr, int length, size_t size)
     printf("riuscita\n");
 }
 
+
+//DOESNT SAVE THE DIGGING, JUST SAVING DIRECTORY BY THE NAME WITHOUT PATH
 void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
 {
     DIR* openedDir;
@@ -105,7 +107,7 @@ int main(int argc, char* argv[])
 	printf("sto iniziando il main\n");//testing
 
     char baseDir[256];
-    ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
+    //ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
     //for masking
     sigset_t set;
     struct sigaction sa;
@@ -184,10 +186,13 @@ int main(int argc, char* argv[])
         {   
             if(dirFlag)
             {
+
+                //ADD THE FKIGN BASEDIR
                 sizeDirList ++;
                 checked_realloc(&dirList,sizeDirList, sizeof(char*));
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
                 ec_null(dirList[sizeDirList - 1] ,"calloc fallita, elemento di dirList non allocato");
+
                 strcpy(dirList[sizeDirList - 1], argv[ac]);
 
             }

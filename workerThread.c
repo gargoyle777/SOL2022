@@ -20,11 +20,11 @@ int errorRetValue=1;
 int retValue=0;
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker"); pthread_exit(&errorRetValue); }    
+    if((s) == -1) { perror("worker EC_MENO1"); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); pthread_exit(&errorRetValue); }
+    if((s) == NULL) { perror("WORKER"); pthread_exit(&errorRetValue); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); pthread_exit(&errorRetValue); }
+    if((s) != 0) { perror("WORKER"); pthread_exit(&errorRetValue); }
 
 struct queueEl *queueHead=NULL;
 int queueSize=0;
@@ -97,7 +97,7 @@ void* worker(void* arg)
     struct queueEl target;
 
     //CONNECT TO THE COLLECTOR
-
+    printf("worker inizia la routine di connessione\n");
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno);
