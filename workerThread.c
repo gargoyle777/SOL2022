@@ -21,7 +21,7 @@ int errorRetValue=1;
 int retValue=0;
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("m"); pthread_exit(&errorRetValue); }    
+    if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror("WORKER"); pthread_exit(&errorRetValue); }
 #define ec_zero(s,m) \
