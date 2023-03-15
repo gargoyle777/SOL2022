@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
 
     for(i=0; i<nthread;i++)
     {
-    	printf("master sta iniziando a fare i join\n");
+    	printf("master sta iniziando a fare il join del thread numero %d\n",i);
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
     printf("master ha finito di fare i join\n");

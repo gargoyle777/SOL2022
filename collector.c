@@ -168,6 +168,7 @@ int main(int argc, char* argv[])
                         allWorkersFd[c]=-1; //close the socket with him
                         break;
                     }
+                    printf("collector ha letto %d a questo giro, %d in totale",nread,accumulator );
                     accumulator+=nread;
                 } while (accumulator<265 && nread>0);
                 printf("collector survived read\n");
@@ -192,11 +193,15 @@ int main(int argc, char* argv[])
     printf("collector e' fuori dal suo loop\n");
     for(c=0;c<maxworkers;c++)
     {
-        if(allWorkersFd[c]!=-1) ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
+        if(allWorkersFd[c]!=-1){
+            ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
+            printf("collector ha chiuso il fd in posizione %d\n",c);
+        }
     }
 
     ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
     qsort(resultArray,arraySize,sizeof(res),compare);
+    printf("collector ha raccolto %d elementi",arraySize);
     for(i=0;i<arraySize;i++)
     {
         printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
@@ -207,5 +212,6 @@ int main(int argc, char* argv[])
     }
     free(resultArray);
     free(allWorkersFd);
-    //ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
+    ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
+    printf("collector chiude");
 }
