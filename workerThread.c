@@ -99,12 +99,16 @@ void* worker(void* arg)
     //CONNECT TO THE COLLECTOR
     printf("worker inizia la routine di connessione\n");
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
+    errno=0;
     ec_meno1(fdSKT,errno);
+    printf("worker socket() worked\n");
+    errno=0;
     ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno);
 
+    printf("worker connesso al collector\n");//testing
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
-	printf("worker connesso al collector\n");//testing
+	
     
     while(flagwork==1)
     {
