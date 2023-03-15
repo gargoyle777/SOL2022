@@ -166,9 +166,9 @@ void* worker(void* arg)
         //sending the value
 
         memset(buffer_write,'\0',265);
-        memcpy(buffer_write, target->filename, strlen(target->filename));      //does memcpy copy the terminator? no because strlen doesnt count it
+        memcpy(buffer_write, target->filename, strlen(target->filename));    
         memcpy(&(buffer_write[257]), &result,8); 
-
+        printf("TEST: %s",buffer_write);
         bytesWritten=0;
         accums=0;
         do{
