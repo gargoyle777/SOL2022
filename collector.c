@@ -222,8 +222,10 @@ int main(int argc, char* argv[])
                 printf("collector ha raccolto <%s>",resultArray[arraySize - 1].name);
 
                 //start ack
-                ec_meno1(write(allWorkersFd[c], ack, 4),"collector morto per write fallita");    
-                printf("collector ha risposto %s",ack);
+                if(allWorkersFd[c]!=-1){
+                    ec_meno1(write(allWorkersFd[c], ack, 4),"collector morto per write fallita");    
+                    printf("collector ha risposto %s",ack);
+                }
             }
         }
     }
