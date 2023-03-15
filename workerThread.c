@@ -169,13 +169,13 @@ void* worker(void* arg)
         memcpy(buffer_write, target->filename, strlen(target->filename));    
         memcpy(&(buffer_write[257]), &result,8); 
         printf("TEST: %s\n",buffer_write);
-        bytesWritten=0;
         accums=0;
         do{
             errno=0;
-            ec_meno1(accums=write(fdSKT, buffer_write, BUFFERSIZE),errno); 
-            bytesWritten+=accums;
-            printf("workes ha scritto %d/265",bytesWritten);
+            bytesWritten=0;
+            ec_meno1(bytesWritten=write(fdSKT, buffer_write, BUFFERSIZE),errno); 
+            accums+=bytesWritten;
+            printf("workes ha scritto %d/265",accums);
         }while(accums<BUFFERSIZE);  
         //end of sending
 
