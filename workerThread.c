@@ -102,7 +102,7 @@ void* worker(void* arg)
     errno=0;
     ec_meno1(fdSKT,errno);
     printf("worker socket() worked\n");
-    counter=0;
+    int counter=0;
     int checker=0;
     while(counter<5)
     {
