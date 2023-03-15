@@ -38,6 +38,23 @@ void sigusr2_handler(int signum)
     flagEndReading= 1;
 }
 
+void checked_realloc(res **ptr, int length, size_t size)
+{
+    errno=0;
+    if(length==1) 
+    {
+        printf("provo malloc \n");
+        *ptr=malloc(length*size);
+    }
+    else 
+    {
+        printf("provo realloc \n");
+        *ptr=realloc(*ptr, length*size);
+    }
+    ec_null(*ptr,"checked_realloc fallita");
+    printf("riuscita\n");
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -75,6 +92,7 @@ int main(int argc, char* argv[])
     long tmplong;
     char *tmpname;
     int c;
+    int accumulator=0;
 
     ec_null(allWorkersFd = malloc(maxworkers*sizeof(int)),"failed to malloc allWorkersFd");
     
@@ -139,20 +157,29 @@ int main(int argc, char* argv[])
             {
                 printf("collector si prepara a leggere dal file descriptor %d\n",c);
                 memset(buffer, 0, BUFFERSIZE);      //zero the memory
-                while((nread=read(fd,buffer,BUFFERSIZE))!=0)
+                accumulator=0;
+                do
                 {
-                    ec_meno1(nread,errno);
-                }
+                    errno=0;
+                    nread=read(fd,buffer,BUFFERSIZE);
+                    if (nread==-1)
+                    {
+                        close(allWorkersFd[c]);
+                        allWorkersFd[c]=-1; //close the socket with him
+                        break;
+                    }
+                    accumulator+=nread;
+                } while (accumulator<265 && nread>0);
                 printf("collector survived read\n");
                 arraySize++;
-                resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
+                checked_realloc(&resultArray,arraySize, sizeof(res));     //realloc for result array
                 ec_null(resultArray,"collector's realloc for resultArray failed");
 
-                memcpy( &(resultArray[arraySize-1].value), &(buffer[strlen(buffer)- 8]) , 8); //value is copied in the structure
-                resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7);
+                memcpy( &(resultArray[arraySize-1].value), &(buffer[BUFFERSIZE - 8]) , 8); //value is copied in the structure
+                resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)+1); //there are at least a pair of \0 bewtween name and long value
                 ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
-                memset(resultArray[arraySize - 1].name, 0, strlen(buffer)-7);   //name is zeroed
-                memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
+                memset(resultArray[arraySize - 1].name, 0, strlen(buffer)+1);   //name is zeroed
+                memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer));        //name is saved in the structure
                 printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
 
                 //start ack

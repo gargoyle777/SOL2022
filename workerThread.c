@@ -14,6 +14,7 @@
 #include "workerThread.h"
 
 #define UNIX_PATH_MAX 255
+#define BUFFERSIZE 265
 #define SOCKNAME "./farm.sck"
 
 int errorRetValue=1;
@@ -82,7 +83,7 @@ long fileCalc(char* fileAddress)
 void* worker(void* arg)
 {
     printf("worker avviato\n");
-    char* buffer_write;
+    char buffer_write[265];
     int flagwork=1;
     char charLong[21];
     char *tmpString;
@@ -118,7 +119,7 @@ void* worker(void* arg)
 
     ec_meno1(checker,errno);
     printf("worker connesso al collector\n");//testing
-    pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
+    //pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket   MAKE THE MASTER CLOSE THEM
     //ready to write and read
 	
     
@@ -165,17 +166,14 @@ void* worker(void* arg)
         result = fileCalc(target.filename);
 
         //sending the value
-        buffer_write = malloc(strlen(target.filename)+8); 
-        ec_null(buffer_write,"malloc on buffer_write failed in worker");
-        pthread_cleanup_push(cleanup_handler, buffer_write);        //spingo cleanup per buffer_write
 
+        memset(buffer_write,'\0',265);
         memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
-        memcpy(&(buffer_write[strlen(tmpString)]), &result,8); 
+        memcpy(&(buffer_write[257]), &result,8); 
 
-        ec_meno1(write(fdSKT, buffer_write, strlen(buffer_write)),errno);    //now i should write buffer_write
+        ec_meno1(write(fdSKT, buffer_write, BUFFERSIZE),errno);    //now i should write buffer_write
         //end of sending
 
-        pthread_cleanup_pop(1); //tolgo per clean up buffer_write con true
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
 
         nread=0;
@@ -189,8 +187,8 @@ void* worker(void* arg)
 
     }
     //chiudo fdsKT???? 
-    ec_meno1(close(fdSKT),errno);
-    pthread_cleanup_pop(0);     //tolgo per clean up del socket
+    //ec_meno1(close(fdSKT),errno);
+    //pthread_cleanup_pop(0);     //tolgo per clean up del socket
     pthread_exit(&retValue);
 }
 
