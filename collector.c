@@ -117,16 +117,20 @@ int main(int argc, char* argv[])
             {
                 if(allWorkersFd[c]==-1)
                 {
+                    pritnf("nuova connessione messa in posizione %d\n",c);
                     allWorkersFd[c] = fdC;
                     c=maxworkers; 
                     numworkers+=1;
+                }
+                else{
+                    printf(" gia' presente un file descriptor in posizione %d\n", c);
                 }
             }
             if(fdC > maxFD)   maxFD=fdC;
         }
         for(c=0;c<maxworkers;c++)
         {
-            printf("collector fa il check del file descriptor %d\n",c);
+            printf("collector fa il check del file descriptor in posizione %d\n",c);
             if(flagEndReading)
             {
                 break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
@@ -134,12 +138,12 @@ int main(int argc, char* argv[])
             if(FD_ISSET(allWorkersFd[c],&rdset))
             {
                 printf("collector si prepara a leggere dal file descriptor %d\n",c);
-                memset(buffer, 0, sizeof(BUFFERSIZE));      //zero the memory
+                memset(buffer, 0, BUFFERSIZE);      //zero the memory
                 while((nread=read(fd,buffer,BUFFERSIZE))!=0)
                 {
                     ec_meno1(nread,errno);
                 }
-
+                printf("collector survived read\n");
                 arraySize++;
                 resultArray = realloc(resultArray,arraySize * sizeof(res));     //realloc for result array
                 ec_null(resultArray,"collector's realloc for resultArray failed");
@@ -147,7 +151,7 @@ int main(int argc, char* argv[])
                 memcpy( &(resultArray[arraySize-1].value), &(buffer[strlen(buffer)- 8]) , 8); //value is copied in the structure
                 resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)-7);
                 ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
-                memset(resultArray[arraySize - 1].name, 0, sizeof(strlen(buffer)-7));   //name is zeroed
+                memset(resultArray[arraySize - 1].name, 0, strlen(buffer)-7);   //name is zeroed
                 memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer)-8);        //name is saved in the structure
                 printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
 
@@ -161,10 +165,10 @@ int main(int argc, char* argv[])
     printf("collector e' fuori dal suo loop\n");
     for(c=0;c<maxworkers;c++)
     {
-        if(allWorkersFd[c]!=-1) ec_meno1(close(allWorkersFd[c]),"collecotr failed to close a socket with a worker");
+        if(allWorkersFd[c]!=-1) ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
     }
 
-    ec_meno1(close(fdSKT),("collecotr failed to close the socket for accepting connection"));
+    ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
     qsort(resultArray,arraySize,sizeof(res),compare);
     for(i=0;i<arraySize;i++)
     {
