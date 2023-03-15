@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
     sigset_t set;
     struct sigaction sa;
 
-    int queueSize = 0;
+    queueSize = 0;
     struct queueEl * tmpPointer;
     pthread_mutex_init(&mtx,NULL);
     ec_zero(pthread_cond_init(&queueNotFull, NULL),"pthread_cond_init failed on condition queueNotFull");
