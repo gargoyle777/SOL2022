@@ -201,12 +201,12 @@ int main(int argc, char* argv[])
                     nread=read(fd,buffer,BUFFERSIZE);
                     if (nread==-1)
                     {
-                        printf("collector read ha dato errore");
+                        printf("collector read ha dato errore\n");
                         close(allWorkersFd[c]);
                         allWorkersFd[c]=-1; //close the socket with him
                         break;
                     }
-                    printf("collector ha letto %d a questo giro, %d in totale",nread,accumulator );
+                    printf("collector ha letto %d a questo giro, %d in totale\n",nread,accumulator );
                     accumulator+=nread;
                 } while (accumulator<265);
                 printf("collector survived read\n");

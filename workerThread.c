@@ -43,7 +43,7 @@ static void lock_cleanup_handler(void* arg)
 static void target_cleanup_handler(void* arg)
 {
     //free(((struct queueEl*) arg)->filename); it's a shallow copy, main is doing the free
-    free(arg);
+    free(*(void**)arg);
 }
 
 static void socket_cleanup_handler(void* arg)
@@ -93,7 +93,7 @@ void* worker(void* arg)
     sa.sun_family = AF_UNIX;
     int nread;
 
-    struct queueEl target;
+    struct queueEl* target;
 
     //CONNECT TO THE COLLECTOR
     printf("worker inizia la routine di connessione\n");
@@ -153,20 +153,20 @@ void* worker(void* arg)
         }
 
         printf("worker cerca di raccogliere l'elemento\n");
-        target = *queueHead;
+        target = queueHead;
         queueHead = queueHead->next;
         queueSize--; 
         ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
         ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
         pthread_cleanup_pop(0); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
-        printf("worker ha lavorato su %s\n",target.filename);
-        result = fileCalc(target.filename);
+        printf("worker ha lavorato su %s\n",target->filename);
+        result = fileCalc(target->filename);
 
         //sending the value
 
         memset(buffer_write,'\0',265);
-        memcpy(buffer_write, target.filename, strlen(target.filename));      //does memcpy copy the terminator? no because strlen doesnt count it
+        memcpy(buffer_write, target->filename, strlen(target->filename));      //does memcpy copy the terminator? no because strlen doesnt count it
         memcpy(&(buffer_write[257]), &result,8); 
 
         bytesWritten=0;
