@@ -45,7 +45,7 @@ static void lock_cleanup_handler(void* arg)
 
 static void target_cleanup_handler(void* arg)
 {
-    free(((struct queueEl*) arg)->filename);
+    //free(((struct queueEl*) arg)->filename); it's a shallow copy, main is doing the free
     free(arg);
 }
 

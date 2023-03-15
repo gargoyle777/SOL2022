@@ -77,11 +77,12 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
     errno = 0;
     ec_null(openedDir = opendir(path),"opendir failed ");
 
-    while ((freshDir=readdir(openedDir)) != NULL) 
+    while ((freshDir=readdir(openedDir)) != NULL) //TODO SUCCEDE BORDELLO CON IL PATH
     {
         memset(tmpString,0,strlen(tmpString));
         memcpy(tmpString,path,strlen(path));
         tmpString[strlen(path)] = '/';
+        printf("ecco il path e lo slash <%s>\n", tmpString);
         memcpy(&(tmpString[strlen(path) +1 ]),freshDir->d_name,strlen(freshDir->d_name));
         if(freshDir->d_type == DT_DIR)
         {
@@ -94,7 +95,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
             *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
             ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
             strcpy(*fileList[(* fileListSize) - 1], tmpString); 
-            printf("ho colelzionato %s\n",*fileList[(* fileListSize) - 1]); //testing
+            printf("ho collezionato %s\n",*fileList[(* fileListSize) - 1]); //testing
         }
     }
     errno=0;
@@ -282,18 +283,17 @@ int main(int argc, char* argv[])
         else
         {
             //TODO:check if this is safe enough, or we are risking stuff
-            //probabilmente devo geestire tutto un puntatore indietro
 
-            tmpPointer = queueHead->next;
+            tmpPointer = queueHead;
 
-            while(tmpPointer != NULL)
+            while(tmpPointer->next != NULL)
             {
                 tmpPointer = tmpPointer->next;
             }
-            tmpPointer = malloc(1*sizeof(struct queueEl));
-            ec_null(tmpPointer,"malloc of an element of the queue failed");
-            tmpPointer->filename = fileList[i];     //shallow copy is enough
-            queueSize++;
+            tmpPointer->next = malloc(1*sizeof(struct queueEl));
+            ec_null(tmpPointer->next,"malloc of an element of the queue failed");
+            tmpPointer->next->filename = fileList[i];     //shallow copy is enough
+            queueSize+=1;
         }
         ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
         printf("master ha segnalato su queue not empty\n");
