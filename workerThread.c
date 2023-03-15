@@ -17,11 +17,11 @@
 #define SOCKNAME "./farm.sck"
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker"); pthread_exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("worker"); pthread_exit(); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); pthread_exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror(m); pthread_exit(); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); pthread_exit(EXIT_FAILURE); }
+    if((s) != 0) { perror(m); pthread_exit(); }
 
 struct queueEl *queueHead=NULL;
 int queueSize=0;
@@ -83,11 +83,12 @@ void* worker(void* arg)
     char charLong[21];
     char *tmpString;
     long result;
-    int fdSKT;
+    int fdSKT,fd;
     struct sockaddr_un sa;
     char ackHolder[4];
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
+    int nread;
 
     struct queueEl target;
 
@@ -170,6 +171,6 @@ void* worker(void* arg)
     //chiudo fdsKT???? 
     ec_meno1(close(fdSKT),errno);
     pthread_cleanup_pop(0);     //tolgo per clean up del socket
-    pthread_exit((void *) 0);
+    pthread_exit();
 }
 
