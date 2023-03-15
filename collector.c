@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     int arraySize=0;
 
     int nread=1;
-    char buffer[BUFFERSIZE];
+    char buffer[265];
     long tmplong;
     char *tmpname;
     int c;
@@ -132,6 +132,7 @@ int main(int argc, char* argv[])
 
         if(select(maxFD+1,&rdset,NULL,NULL,NULL)==-1)
         {
+            printf("collector's select exploded\n");
             //tewpo di finire
             for(c=0;c<maxworkers;c++)
             {
@@ -144,7 +145,7 @@ int main(int argc, char* argv[])
 
             ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
             qsort(resultArray,arraySize,sizeof(res),compare);
-            printf("collector ha raccolto %d elementi",arraySize);
+            printf("collector ha raccolto %d elementi\n",arraySize);
             for(i=0;i<arraySize;i++)
             {
                 printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
@@ -192,7 +193,7 @@ int main(int argc, char* argv[])
             if(FD_ISSET(allWorkersFd[c],&rdset))
             {
                 printf("collector si prepara a leggere dal file descriptor %d\n",c);
-                memset(buffer, 0, BUFFERSIZE);      //zero the memory
+                memset(buffer, '\0', BUFFERSIZE);      //zero the memory
                 accumulator=0;
                 do
                 {
@@ -242,7 +243,7 @@ int main(int argc, char* argv[])
 
     ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
     qsort(resultArray,arraySize,sizeof(res),compare);
-    printf("collector ha raccolto %d elementi",arraySize);
+    printf("collector ha raccolto %d elementi\n",arraySize);
     for(i=0;i<arraySize;i++)
     {
         printf("%ld %s\n",resultArray[i].value,resultArray[i].name);

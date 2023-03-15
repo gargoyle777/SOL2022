@@ -168,7 +168,7 @@ void* worker(void* arg)
         memset(buffer_write,'\0',265);
         memcpy(buffer_write, target->filename, strlen(target->filename));    
         memcpy(&(buffer_write[257]), &result,8); 
-        printf("TEST: %s",buffer_write);
+        printf("TEST: %s\n",buffer_write);
         bytesWritten=0;
         accums=0;
         do{
