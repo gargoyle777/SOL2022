@@ -190,6 +190,7 @@ void* worker(void* arg)
             ec_meno1(nread=read(fd,ackHolder,4),"worker dead on ack reading");
             accums+=nread;
         } while(accums<4);
+        printf("workers reeceived the ack: %s\n",ackHolder);
 
     }
     //chiudo fdsKT???? 
