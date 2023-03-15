@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     int *allWorkersFd;
 	char ack[4]="ACK";
     res *resultArray;
-    int arraySize;
+    int arraySize=0;
 
     int nread=1;
     char buffer[BUFFERSIZE];
