@@ -10,7 +10,7 @@ workerThread.o: workerThread.c
 	gcc -c workerThread.c -lpthread
 
 generafile: generafile.c
-	gcc -o geenrafile generafile.c
+	gcc -o generafile generafile.c -std=c99
 
 test: test.sh
 	chmod 701 test.sh
