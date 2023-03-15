@@ -237,7 +237,6 @@ int main(int argc, char* argv[])
     for(i=0; i<nthread;i++)
     {
         ec_zero(pthread_create(&(tSlaves[i]), NULL, &worker, NULL),"ptread_create failure");  
-
     }
     
     //START producing

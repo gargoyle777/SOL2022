@@ -1,3 +1,5 @@
+//CHECK HOW FLAGWORK IS SET TO 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,11 +17,11 @@
 #define SOCKNAME "./farm.sck"
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker"); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror("worker"); pthread_exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror(m); pthread_exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
+    if((s) != 0) { perror(m); pthread_exit(EXIT_FAILURE); }
 
 struct queueEl *queueHead=NULL;
 int queueSize=0;
@@ -74,8 +76,6 @@ long fileCalc(char* fileAddress)
     return result;
 }
 
-
-
 void* worker(void* arg)
 {
     char* buffer_write;
@@ -85,6 +85,7 @@ void* worker(void* arg)
     long result;
     int fdSKT;
     struct sockaddr_un sa;
+    char ackHolder[4];
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
 
@@ -94,7 +95,7 @@ void* worker(void* arg)
 
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,errno);
-    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno );
+    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno);
 
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
@@ -110,18 +111,26 @@ void* worker(void* arg)
         	printf("worker in attesa a causa di lista vuota\n");
             ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
         }
+        
         printf("worker fuori dal loop con wait, queuesize= %d\n",queueSize);
-        if(queueSize ==0)
+
+        if(queueSize==0)
         {
-        	printf("worker esce, 0 elementi nella e masterexitreq settato\n");
-        	flagwork=0;
+        	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato\n");
+            pthread_exit((void *) 0);
 	    }
+
         if(masterExitReq==2)
         {
            	printf("worker esce, masterexitreq settato a 2\n");
-           	flagwork=0;		//TODO check clean up, for sigusr1
+           	pthread_exit((void *) 0);
         }
 
+        if(masterExitReq==1 && queueSize>0)
+        {
+            printf("worker fa un ultimo giro\n");
+            flagwork=0;
+        }
 
         printf("worker cerca di raccogliere l'elemento\n");
         target = *queueHead;
@@ -129,7 +138,6 @@ void* worker(void* arg)
         queueSize--; 
         ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
         ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
-
         pthread_cleanup_pop(0); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
         printf("worker ha lavorato su %s\n",target.filename);
@@ -147,7 +155,16 @@ void* worker(void* arg)
         //end of sending
 
         pthread_cleanup_pop(1); //tolgo per clean up buffer_write con true
-        pthread_cleanup_pop(1); //tolgo per clean up del target cin true
+        pthread_cleanup_pop(1); //tolgo per clean up del target con true
+
+        nread=0;
+        memset(ackHolder,0,4);
+        do
+        {
+            errno=0;
+            nread=read(fd,ackHolder,4);
+            ec_meno1(nread,errno);
+        } while(nread!=0);
 
     }
     //chiudo fdsKT???? 
