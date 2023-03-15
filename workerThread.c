@@ -86,7 +86,7 @@ void* worker(void* arg)
     char charLong[21];
     char *tmpString;
     long result;
-    int fdSKT,fd;
+    int fdSKT;
     struct sockaddr_un sa;
     char ackHolder[4];
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
@@ -187,7 +187,7 @@ void* worker(void* arg)
         do
         {
             errno=0;
-            ec_meno1(nread=read(fd,ackHolder,4),"worker dead on ack reading");
+            ec_meno1(nread=read(fdSKT,ackHolder,4),"worker dead on ack reading");
             accums+=nread;
         } while(accums<4);
         printf("workers reeceived the ack: %s\n",ackHolder);
