@@ -10,7 +10,7 @@
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); }    
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE);}    
 
 #define ec_null(s,m) \
     if((s) == NULL) { perror("collector ec_null"); exit(EXIT_FAILURE); }
@@ -61,17 +61,23 @@ int main(int argc, char* argv[])
 
 	printf("collector avviato\n");//testing
 
-    sigset_t mask;
+    sigset_t blockset;
+
+    // block all signals
+    sigfillset(&blockset);
+
+    // set the signal mask to block all signals 
+    sigprocmask(SIG_SETMASK, &blockset, NULL);
     //signal handling for sigusr2
-    ec_meno1(sigemptyset(&mask),(strerror(errno)));
-    ec_meno1(sigaddset(&mask, SIGUSR2),(strerror(errno)));
-    ec_meno1(sigprocmask(SIG_BLOCK, &mask, NULL),(strerror(errno)));
     struct sigaction siga;
     siga.sa_handler = sigusr2_handler;
     ec_meno1(sigemptyset(&siga.sa_mask),(strerror(errno)));
     siga.sa_flags = 0;
     ec_meno1(sigaction(SIGUSR2, &siga, NULL),(strerror(errno)));
-    ec_meno1(sigprocmask(SIG_UNBLOCK, &mask, NULL),(strerror(errno)));
+    
+    sigemptyset(&blockset);
+    sigaddset(&blockset,SIGUSR2);
+    sigprocmask(SIG_UNBLOCK,&blockset,NULL);
 
     int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number
     int maxFD = 0;

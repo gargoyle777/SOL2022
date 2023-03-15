@@ -1,13 +1,13 @@
 all: collector masterThread generafile test
 
 collector: collector.c workerThread.o
-	gcc -o collector collector.c workerThread.o -lpthread
+	gcc -o collector collector.c workerThread.o -lpthread -std=c99
 
 masterThread: masterThread.c workerThread.o
-	gcc -o farm masterThread.c workerThread.o -lpthread
+	gcc -o farm masterThread.c workerThread.o -lpthread -std=c99
 
 workerThread.o: workerThread.c
-	gcc -c workerThread.c -lpthread
+	gcc -c workerThread.c -lpthread -std=c99
 
 generafile: generafile.c
 	gcc -o generafile generafile.c -std=c99

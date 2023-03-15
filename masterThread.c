@@ -332,6 +332,6 @@ int main(int argc, char* argv[])
     kill(pid,SIGUSR2);
     int checkk=0;
     waitpid(pid,&checkk,0);
-    printf("collector returned with %d\n",WEXITSTATUS(checkk));
+    printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     printf("master ha aspettato il collector\n---master chiude---");
 }
