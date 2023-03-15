@@ -123,14 +123,14 @@ int main(int argc, char* argv[])
             if(allWorkersFd[c] > -1)    FD_SET(allWorkersFd[c],&rdset);
         }
 
-        ec_meno1(select(maxFD+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
+        ec_meno1(select(maxFD+1,&rdset,NULL,NULL,NULL),"collector morto sul select");
         printf("collector sopravvissuto al select\n");
 
         if(FD_ISSET(fdSKT,&rdset)) //socket connect ready
         {
             printf("collector accettera' una connesione\n");
             fdC = accept(fdSKT, NULL, 0);
-            ec_meno1(fdC,(strerror(errno)));
+            ec_meno1(fdC,"collector morto sull'accept");
             for(c=0;c<maxworkers;c++)
             {
                 if(allWorkersFd[c]==-1)
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
                 printf("colector ha raccolto %s",resultArray[arraySize - 1].name);
 
                 //start ack
-                ec_meno1(write(fdSKT, ack, strlen(ack)),"write fallita");    
+                ec_meno1(write(fdSKT, ack, strlen(ack)),"collector morto per write fallita");    
                 printf("collector ha risposto %s",ack);
             }
         }
