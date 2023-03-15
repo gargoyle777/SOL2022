@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
                 ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
 
                 strcpy(fileList[sizeFileList-1],argv[ac]);
-                printf("file digerito: %s\n",fileList[sizeFileList - 1]); //testing
+                printf("***file digerito: %s ***\n",fileList[sizeFileList - 1]); //testing
             }
         }
     }
@@ -248,6 +248,7 @@ int main(int argc, char* argv[])
 	printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
     for(i=0;i<sizeFileList;i++)
     {
+        printf("mi occupo di %s\n",fileList[i]);
         ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
         while(queueSize>=qlen)  //full queue
         {
@@ -260,13 +261,12 @@ int main(int argc, char* argv[])
         if(queueSize == 0)
         {
         	printf("master inizia a mettere un elemento in testa\n");
-
             queueHead = malloc(1*sizeof(struct queueEl));
             ec_null(queueHead,"malloc of queueHead failed");
             queueHead->filename = fileList[i];     //TODO: check ifshallow copy is enough
             queueSize = 1;
 
-            printf("master ha messo un elemento in testa\n");
+            printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
         }
         else
         {
