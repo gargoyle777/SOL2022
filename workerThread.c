@@ -21,7 +21,7 @@ int errorRetValue=1;
 int retValue=0;
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker EC_MENO1"); pthread_exit(&errorRetValue); }    
+    if((s) == -1) { perror("m"); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror("WORKER"); pthread_exit(&errorRetValue); }
 #define ec_zero(s,m) \
@@ -99,7 +99,7 @@ void* worker(void* arg)
     printf("worker inizia la routine di connessione\n");
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     errno=0;
-    ec_meno1(fdSKT,errno);
+    ec_meno1(fdSKT,(strerror(errno)));
     printf("worker socket() worked\n");
     int counter=0;
     int checker=0;
@@ -115,7 +115,7 @@ void* worker(void* arg)
         else counter = 5;
     }
 
-    ec_meno1(checker,errno);
+    ec_meno1(checker,(strerror(errno)));
     printf("worker connesso al collector\n");//testing
     //pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket   MAKE THE MASTER CLOSE THEM
     //ready to write and read
@@ -173,21 +173,21 @@ void* worker(void* arg)
         do{
             errno=0;
             bytesWritten=0;
-            ec_meno1(bytesWritten=write(fdSKT, buffer_write, BUFFERSIZE),errno); 
+            ec_meno1(bytesWritten=write(fdSKT, buffer_write, BUFFERSIZE),"!!worker dead on write!!\n"); 
             accums+=bytesWritten;
-            printf("workes ha scritto %d/265",accums);
+            printf("workes ha scritto %d/265\n",accums);
         }while(accums<BUFFERSIZE);  
         //end of sending
 
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
 
-        nread=0;
         accums=0;
         memset(ackHolder,0,4);
         do
         {
             errno=0;
-            ec_meno1(nread=read(fdSKT,ackHolder,4),"worker dead on ack reading");
+            nread=0;
+            ec_meno1(nread=read(fdSKT,ackHolder,4),"worker dead on ack reading\n");
             accums+=nread;
         } while(accums<4);
         printf("workers reeceived the ack: %s\n",ackHolder);
