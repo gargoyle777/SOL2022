@@ -94,8 +94,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
             *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
             ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
             strcpy(*fileList[(* fileListSize) - 1], tmpString); 
-            printf("testing0\n");//testing
-            printf("%s\n",freshDir->d_name); //testing
+            printf("ho colelzionato %s\n",*fileList[(* fileListSize) - 1]); //testing
         }
     }
     errno=0;

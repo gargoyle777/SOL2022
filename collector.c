@@ -174,5 +174,5 @@ int main(int argc, char* argv[])
     }
     free(resultArray);
     free(allWorkersFd);
-    ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
+    //ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
 }
