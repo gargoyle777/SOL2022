@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
     fd_set set,rdset;
     struct sockaddr_un sa;
 
+    int numworkers=0;
     int *allWorkersFd;
 	char* ack="ACK";
     res *resultArray;
@@ -73,10 +74,11 @@ int main(int argc, char* argv[])
     char buffer[BUFFERSIZE];
     long tmplong;
     char *tmpname;
+    int c;
 
     ec_null(allWorkersFd = malloc(maxworkers*sizeof(int)),"failed to malloc allWorkersFd");
     
-    for(int c=0;c<maxworkers;c++)   //init to -1
+    for(c=0;c<maxworkers;c++)   //init to -1
     {
         allWorkersFd[c]=-1;
     }
@@ -98,7 +100,7 @@ int main(int argc, char* argv[])
     {
         FD_ZERO(&rdset);
         if(numworkers < maxworkers) FD_SET(fdSKT,&rdset);
-        for(int c=0;c<maxworkers;c++)
+        for(c=0;c<maxworkers;c++)
         {
             if(allWorkersFd[c] > -1)    FD_SET(allWorkersFd[c],&rdset);
         }
@@ -106,22 +108,23 @@ int main(int argc, char* argv[])
         ec_meno1(select(maxFD+1,&rdset,NULL,NULL,NULL),(strerror(errno)));
         printf("collector sopravvissuto al select\n");
 
-        if(FD_ISSET(fdSKT)) //socket connect ready
+        if(FD_ISSET(fdSKT,&rdset)) //socket connect ready
         {
             printf("collector accettera' una connesione\n");
             fdC = accept(fdSKT, NULL, 0);
             ec_meno1(fdC,(strerror(errno)));
-            for(int c=0;c<maxworkers;c++)
+            for(c=0;c<maxworkers;c++)
             {
                 if(allWorkersFd[c]==-1)
                 {
                     allWorkersFd[c] = fdC;
                     c=maxworkers; 
+                    numworkers+=1;
                 }
             }
             if(fdC > maxFD)   maxFD=fdC;
         }
-        for(int c=0;c<maxworkers;c++)
+        for(c=0;c<maxworkers;c++)
         {
             if(flagEndReading)
             {
@@ -154,7 +157,7 @@ int main(int argc, char* argv[])
     }
 
     printf("collector e' fuori dal suo loop\n");
-    for(int c=0;c<maxworkers;c++)
+    for(c=0;c<maxworkers;c++)
     {
         if(allWorkersFd[c]!=-1) ec_meno1(close(allWorkersFd[c]),"collecotr failed to close a socket with a worker");
     }
@@ -170,6 +173,6 @@ int main(int argc, char* argv[])
         free(resultArray[i].name);
     }
     free(resultArray);
-    free(allWorkersFd)
+    free(allWorkersFd);
     ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
 }
