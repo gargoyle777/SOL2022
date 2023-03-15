@@ -16,12 +16,15 @@
 #define UNIX_PATH_MAX 255
 #define SOCKNAME "./farm.sck"
 
+int errorRetValue=1;
+int retValue=0;
+
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("worker"); pthread_exit(); }    
+    if((s) == -1) { perror("worker"); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
-    if((s) == NULL) { perror(m); pthread_exit(); }
+    if((s) == NULL) { perror(m); pthread_exit(&errorRetValue); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror(m); pthread_exit(); }
+    if((s) != 0) { perror(m); pthread_exit(&errorRetValue); }
 
 struct queueEl *queueHead=NULL;
 int queueSize=0;
@@ -118,13 +121,13 @@ void* worker(void* arg)
         if(queueSize==0)
         {
         	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato\n");
-            pthread_exit((void *) 0);
+            pthread_exit(&retValue);
 	    }
 
         if(masterExitReq==2)
         {
            	printf("worker esce, masterexitreq settato a 2\n");
-           	pthread_exit((void *) 0);
+           	pthread_exit(&retValue);
         }
 
         if(masterExitReq==1 && queueSize>0)
@@ -171,6 +174,6 @@ void* worker(void* arg)
     //chiudo fdsKT???? 
     ec_meno1(close(fdSKT),errno);
     pthread_cleanup_pop(0);     //tolgo per clean up del socket
-    pthread_exit();
+    pthread_exit(&retValue);
 }
 
