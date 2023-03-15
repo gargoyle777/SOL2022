@@ -329,5 +329,6 @@ int main(int argc, char* argv[])
 
     printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
-
+    waitpid(pid);
+    printf("master ha aspettato il colector\n---master chiude---");
 }
