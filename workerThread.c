@@ -102,9 +102,21 @@ void* worker(void* arg)
     errno=0;
     ec_meno1(fdSKT,errno);
     printf("worker socket() worked\n");
-    errno=0;
-    ec_meno1(connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)),errno);
+    counter=0;
+    int checker=0;
+    while(counter<5)
+    {
+        errno=0;
+        checker=0;
+        if(checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)) ==-1)
+        {
+            sleep(1);
+            counter+=1;
+        }
+        else counter = 5;
+    }
 
+    ec_meno1(checker,errno);
     printf("worker connesso al collector\n");//testing
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket
     //ready to write and read
