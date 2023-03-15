@@ -9,6 +9,7 @@
 #include <string.h>
 #include <signal.h>
 #include "workerThread.h"
+#include <sys/wait.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror("master"); exit(EXIT_FAILURE); }    
@@ -329,6 +330,8 @@ int main(int argc, char* argv[])
 
     printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
-    waitpid(pid);
-    printf("master ha aspettato il colector\n---master chiude---");
+    int checkk=0;
+    waitpid(pid,&checkk,0);
+    printf("collector returned with %d\n",WEXISTATUS(checkk));
+    printf("master ha aspettato il collector\n---master chiude---");
 }
