@@ -73,6 +73,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
     DIR* openedDir;
     struct dirent* freshDir;
     char tmpString[256];
+
     printf("scavo in una directory\n"); //testing
 
     errno = 0;
@@ -80,13 +81,14 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
 
     while ((freshDir=readdir(openedDir)) != NULL) //TODO SUCCEDE BORDELLO CON IL PATH
     {
-        memset(tmpString,0,strlen(tmpString));
+        memset(tmpString,0,256);
         memcpy(tmpString,path,strlen(path));
-        tmpString[strlen(path)] = '/';
-        printf("ecco il path e lo slash <%s>\n", tmpString);
-        memcpy(&(tmpString[strlen(path) +1 ]),freshDir->d_name,strlen(freshDir->d_name));
-        if(freshDir->d_type == DT_DIR)
+        memcpy(&(tmpString[strlen(path)]),freshDir->d_name,strlen(freshDir->d_name));
+        printf("ecco il path <%s>\n", tmpString);
+
+        if(freshDir->d_type == DT_DIR)  //it's a directory
         {
+            tmpString[strlen(tmpString)] = '/';
             directoryDigger(tmpString,fileList,fileListSize);            
         }
         else if(freshDir->d_type == DT_REG)
@@ -98,8 +100,9 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
             strcpy(*fileList[(* fileListSize) - 1], tmpString); 
             printf("ho collezionato %s\n",*fileList[(* fileListSize) - 1]); //testing
         }
+        errno=0;
     }
-    errno=0;
+    if(errno!=0)    ec_null(freshDir,"something went wrong with readdir()");
     ec_meno1(closedir(openedDir),"failure on close dir");
 }
 
@@ -107,7 +110,6 @@ int main(int argc, char* argv[])
 {
 	printf("sto iniziando il main\n");//testing
 
-    char baseDir[256];
     //ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
     //for masking
     sigset_t set;
@@ -187,8 +189,6 @@ int main(int argc, char* argv[])
         {   
             if(dirFlag)
             {
-
-                //ADD THE FKIGN BASEDIR
                 sizeDirList ++;
                 checked_realloc(&dirList,sizeDirList, sizeof(char*));
                 dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
@@ -203,13 +203,11 @@ int main(int argc, char* argv[])
                 sizeFileList ++;
 
                 checked_realloc(&fileList, sizeFileList, sizeof(char*));
-                fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) + strlen(baseDir)+1);
+                fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) +1);
                 ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
 
-                memcpy(fileList[sizeFileList - 1],baseDir,strlen(baseDir));
-                fileList[sizeFileList - 1][strlen(baseDir)] ='/';
-                memcpy(&(fileList[sizeFileList-1][strlen(baseDir)+1]),argv[ac],strlen(argv[ac]));
-                printf("%s\n",fileList[sizeFileList - 1]); //testing
+                strcpy(fileList[sizeFileList-1],argv[ac]);
+                printf("file digerito: %s\n",fileList[sizeFileList - 1]); //testing
             }
         }
     }
@@ -235,17 +233,6 @@ int main(int argc, char* argv[])
     	printf("sto per iniziare a scavare");
         directoryDigger(dirList[i], &fileList, &sizeFileList);
     }
-
-    for(i=0; i<sizeDirList; i++)
-    {
-        printf("faccio il free di %s\n",dirList[i]);
-        free(dirList[i]);
-    }
-    
-    if(sizeDirList>0){
-        printf("faccio il free di dir list\n");
-        free(dirList);
-    }   
     
     //END of directory exploration
 
@@ -331,6 +318,19 @@ int main(int argc, char* argv[])
     printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
     int checkk=0;
+
+    //clean dei vecchi valori
+    for(i=0; i<sizeDirList; i++)
+    {
+        printf("faccio il free di %s\n",dirList[i]);
+        free(dirList[i]);
+    }
+    
+    if(sizeDirList>0){
+        printf("faccio il free di dir list\n");
+        free(dirList);
+    }   
+    
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     printf("master ha aspettato il collector\n---master chiude---");

@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     res *resultArray;
     int arraySize;
 
-    int nread;
+    int nread=1;
     char buffer[BUFFERSIZE];
     long tmplong;
     char *tmpname;
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 
         if(select(maxFD+1,&rdset,NULL,NULL,NULL)==-1)
         {
-                //tewpo di finire
+            //tewpo di finire
             for(c=0;c<maxworkers;c++)
             {
                 if(allWorkersFd[c]!=-1)
