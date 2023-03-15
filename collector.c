@@ -130,7 +130,36 @@ int main(int argc, char* argv[])
             if(allWorkersFd[c] > -1)    FD_SET(allWorkersFd[c],&rdset);
         }
 
-        ec_meno1(select(maxFD+1,&rdset,NULL,NULL,NULL),"collector morto sul select");
+        if(select(maxFD+1,&rdset,NULL,NULL,NULL)==-1)
+        {
+                //tewpo di finire
+            for(c=0;c<maxworkers;c++)
+            {
+                if(allWorkersFd[c]!=-1)
+                {
+                    ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
+                    printf("collector ha chiuso il fd in posizione %d\n",c);
+                }
+            }
+
+            ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
+            qsort(resultArray,arraySize,sizeof(res),compare);
+            printf("collector ha raccolto %d elementi",arraySize);
+            for(i=0;i<arraySize;i++)
+            {
+                printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
+            }
+            for(i=0;i<arraySize;i++)
+            {
+                free(resultArray[i].name);
+            }
+            free(resultArray);
+            free(allWorkersFd);
+            ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
+            printf("---collector chiude dal select---\n");
+            return 2;   //testing
+
+        }
         printf("collector sopravvissuto al select\n");
 
         if(FD_ISSET(fdSKT,&rdset)) //socket connect ready
@@ -200,7 +229,8 @@ int main(int argc, char* argv[])
     printf("collector e' fuori dal suo loop\n");
     for(c=0;c<maxworkers;c++)
     {
-        if(allWorkersFd[c]!=-1){
+        if(allWorkersFd[c]!=-1)
+        {
             ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
             printf("collector ha chiuso il fd in posizione %d\n",c);
         }
