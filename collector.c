@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
             {
                 if(allWorkersFd[c]==-1)
                 {
-                    pritnf("nuova connessione messa in posizione %d\n",c);
+                    printf("nuova connessione messa in posizione %d\n",c);
                     allWorkersFd[c] = fdC;
                     c=maxworkers; 
                     numworkers+=1;
