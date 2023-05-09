@@ -2,10 +2,6 @@
 #define WORKERTHREAD_H_
 #include <pthread.h>
 
-#define UNIX_PATH_MAX 256
-#define BUFFERSIZE 265
-#define SOCKNAME "./farm.sck"
-
 typedef struct queueElementName
 {
     char *filename;

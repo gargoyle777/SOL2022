@@ -11,10 +11,6 @@
 #include <unistd.h>
 #include "senderThread.h"
 
-#define SOCKNAME "./farm.sck"
-#define UNIX_PATH_MAX 256
-static int errorRetValue=1;
-static int retValue=0;
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
@@ -25,6 +21,8 @@ static int retValue=0;
 
 sqElement *sqHead=NULL;
 int sqSize=0;
+pthread_mutex_t sendermtx;
+pthread_cond_t sqEmpty;
 
 static void lock_cleanup_handler(void* arg)
 {
