@@ -66,6 +66,53 @@ void checked_realloc(char ***ptr, int length, size_t size)
     printf("riuscita\n");
 }
 
+static void insertElementQueue(char* target, int queueUpperLimit)
+{
+    printf("master si occupd di %s\n",target);
+    ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
+    while(queueSize>=queueUpperLimit)  //full queue
+    {
+        ec_zero(pthread_cond_wait(&(queueFull),&mtx),"pthread_cond_wait failed on queueFull");
+    }
+    if(flagEndFetching)     //setted
+    {
+        return; //TODO: CHECK this branch
+    }
+
+    if(queueSize == 0)
+    {
+        printf("master inizia a mettere un elemento in testa\n");
+        queueHead = malloc(sizeof(qElem));
+        ec_null(queueHead,"malloc of queueHead failed");
+        queueHead->next = NULL;
+        queueHead->filename = malloc(strnlen(target,UNIX_PATH_MAX));
+        memset(queueHead->filename,0,UNIX_PATH_MAX);
+        strncpy(queueHead->filename, target, UNIX_PATH_MAX);  
+        queueSize = 1;
+        printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
+    }
+    else
+    {
+        qElem *tmpPointer = queueHead;
+        while(tmpPointer->next != NULL)
+        {
+            tmpPointer = tmpPointer->next;
+        }
+        tmpPointer->next = malloc(sizeof(qElem));
+        ec_null(tmpPointer->next,"malloc of an element of the queue failed");
+        tmpPointer = tmpPointer->next;
+        tmpPointer->next = NULL;
+        tmpPointer->filename = malloc(strnlen(target,UNIX_PATH_MAX));
+        memset(tmpPointer->filename,0,UNIX_PATH_MAX);
+        strncpy(tmpPointer->filename, target, UNIX_PATH_MAX);  
+        queueSize++;
+    }
+
+    ec_zero(pthread_cond_signal(&queueEmpty),"pthread_cond_signal failed with queueEmpty");
+    printf("master ha segnalato su queue not empty\n");
+    ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
+    printf("master ha lasciato il lock\n");
+}
 
 //DOESNT SAVE THE DIGGING, JUST SAVING DIRECTORY BY THE NAME WITHOUT PATH
 void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
@@ -116,10 +163,10 @@ int main(int argc, char* argv[])
     struct sigaction sa;
 
     queueSize = 0;
-    struct queueEl * tmpPointer;
+    qElem * tmpPointer;
     pthread_mutex_init(&mtx,NULL);
-    ec_zero(pthread_cond_init(&queueNotFull, NULL),"pthread_cond_init failed on condition queueNotFull");
-    ec_zero(pthread_cond_init(&queueNotEmpty, NULL),"pthread_cond_init failed on condition queueNotEmpty");
+    ec_zero(pthread_cond_init(&queueFull, NULL),"pthread_cond_init failed on condition queueFull");
+    ec_zero(pthread_cond_init(&queueEmpty, NULL),"pthread_cond_init failed on condition queueEmpty");
 
 
     pthread_t *tSlaves;
@@ -249,44 +296,7 @@ int main(int argc, char* argv[])
     for(i=0;i<sizeFileList;i++)
     {
         printf("mi occupo di %s\n",fileList[i]);
-        ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
-        while(queueSize>=qlen)  //full queue
-        {
-            ec_zero(pthread_cond_wait(&(queueNotFull),&(mtx)),"pthread_cond_wait failed on queueNotFull");
-        }
-        if(flagEndFetching)     //setted
-        {
-            break;
-        }
-        if(queueSize == 0)
-        {
-        	printf("master inizia a mettere un elemento in testa\n");
-            queueHead = malloc(1*sizeof(struct queueEl));
-            ec_null(queueHead,"malloc of queueHead failed");
-            queueHead->filename = fileList[i];     //TODO: check ifshallow copy is enough
-            queueSize = 1;
-
-            printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
-        }
-        else
-        {
-            //TODO:check if this is safe enough, or we are risking stuff
-
-            tmpPointer = queueHead;
-
-            while(tmpPointer->next != NULL)
-            {
-                tmpPointer = tmpPointer->next;
-            }
-            tmpPointer->next = malloc(1*sizeof(struct queueEl));
-            ec_null(tmpPointer->next,"malloc of an element of the queue failed");
-            tmpPointer->next->filename = fileList[i];     //shallow copy is enough
-            queueSize+=1;
-        }
-        ec_zero(pthread_cond_signal(&queueNotEmpty),"pthread_cond_signal failed with queueNotEmpty");
-        printf("master ha segnalato su queue not empty\n");
-        ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
-        printf("master ha lasciato il lock\n");
+        insertElementQueue(fileList[i],qlen);
     }
    
     ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
@@ -299,7 +309,7 @@ int main(int argc, char* argv[])
     else{
         masterExitReq = 1;
     }
-    ec_zero(pthread_cond_broadcast(&(queueNotEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
+    ec_zero(pthread_cond_broadcast(&(queueEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
     ec_zero(pthread_mutex_unlock(&(mtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
 
     for(i=0; i<nthread;i++)
@@ -307,6 +317,7 @@ int main(int argc, char* argv[])
     	printf("master sta iniziando a fare il join del thread numero %d\n",i);
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
+
     printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
     {

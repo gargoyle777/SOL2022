@@ -12,10 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "workerThread.h"
-
-#define UNIX_PATH_MAX 255
-#define BUFFERSIZE 265
-#define SOCKNAME "./farm.sck"
+#include "senderThread.h"
 
 int errorRetValue=1;
 int retValue=0;
@@ -27,28 +24,28 @@ int retValue=0;
 #define ec_zero(s,m) \
     if((s) != 0) { perror("WORKER"); pthread_exit(&errorRetValue); }
 
-struct queueEl *queueHead=NULL;
+qElem *queueHead=NULL;
 int queueSize=0;
 pthread_mutex_t mtx;
-pthread_cond_t queueNotFull;
-pthread_cond_t queueNotEmpty;
+pthread_cond_t queueFull;
+pthread_cond_t queueEmpty;
 int masterExitReq=0;
 
 
-static void lock_cleanup_handler(void* arg)
+static void sender_lock_cleanup_handler(void* arg)
 {
-    ec_zero(pthread_mutex_unlock(arg),"worker's unlock failed during cleanup");
+    ec_zero(pthread_mutex_unlock(&sendermtx),"worker's unlock failed during cleanup");
+}
+
+static void producer_lock_cleanup_handler(void* arg)
+{
+    ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed during cleanup");
 }
 
 static void target_cleanup_handler(void* arg)
 {
-    //free(((struct queueEl*) arg)->filename); it's a shallow copy, main is doing the free
-    free(*(void**)arg);
-}
-
-static void socket_cleanup_handler(void* arg)
-{
-    ec_meno1(close(*((int*) arg)),(strerror(errno)));
+    free((*(qElem**) arg)->filename);
+    free(*(qElem**) arg);
 }
 
 static void file_cleanup_handler(void *arg)
@@ -56,7 +53,7 @@ static void file_cleanup_handler(void *arg)
     ec_zero(fclose(*(FILE**)arg),(strerror(errno)));
 }
 
-long fileCalc(char* fileAddress)
+static long fileCalc(char* fileAddress)
 {
     FILE *file;
     long tmp;
@@ -64,9 +61,10 @@ long fileCalc(char* fileAddress)
     long result = 0;
     printf("worker sta per accedere a: %s\n",fileAddress);//testing
 
+    pthread_cleanup_push(file_cleanup_handler, &file);
     file = fopen(fileAddress, "rb"); 
     ec_null(file,(strerror(errno)));
-    pthread_cleanup_push(file_cleanup_handler, &file);
+    
     while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
     {
         result = result + (tmp * i);
@@ -74,6 +72,28 @@ long fileCalc(char* fileAddress)
     }
     pthread_cleanup_pop(1); //true per fare il fclose
     return result;
+}
+
+static void safeDeposit(sqElement* target)
+{
+    sqElement* tmp; 
+    
+    pthread_cleanup_push(sender_lock_cleanup_handler);  //lock del sender
+    ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
+
+    if( sqSize == 0)
+    {
+        sqHead = target;
+        pthread_cond_signal(sqEmpty);
+    }
+    else
+    {
+        tmp = sqHead;
+        while(tmp->next != NULL) tmp = tmp->next;
+        tmp->next = target;
+    }
+    sqSize++;
+    pthread_cleanup_pop(1); //rilascio il lock
 }
 
 void* worker(void* arg)
@@ -92,44 +112,19 @@ void* worker(void* arg)
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
     int nread;
-
-    struct queueEl* target;
-
-    //CONNECT TO THE COLLECTOR
-    printf("worker inizia la routine di connessione\n");
-    fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
-    errno=0;
-    ec_meno1(fdSKT,(strerror(errno)));
-    printf("worker socket() worked\n");
-    int counter=0;
-    int checker=0;
-    while(counter<5)
-    {
-        errno=0;
-        checker=0;
-        if(checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)) ==-1)
-        {
-            sleep(1);
-            counter+=1;
-        }
-        else counter = 5;
-    }
-
-    ec_meno1(checker,(strerror(errno)));
-    printf("worker connesso al collector\n");//testing
-    //pthread_cleanup_push(socket_cleanup_handler, &fdSKT);   //spingo cleanup per socket   MAKE THE MASTER CLOSE THEM
-    //ready to write and read
-	
+    sqElement *sqePointer;
+    qElem* target;
     
     while(flagwork==1)
     {
+        sqePointer = NULL;
         ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
-        pthread_cleanup_push(lock_cleanup_handler, &mtx);       //spingo cleanup per lock
+        pthread_cleanup_push(producer_lock_cleanup_handler);       //spingo cleanup per lock
 
         while(queueSize==0 && masterExitReq==0)
         {
         	printf("worker in attesa a causa di lista vuota\n");
-            ec_zero(pthread_cond_wait(&queueNotEmpty,&mtx),"worker's cond wait on queueNotEmpty failed");
+            ec_zero(pthread_cond_wait(&queueEmpty,&mtx),"worker's cond wait on queueEmpty failed");
         }
         
         printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
@@ -156,46 +151,24 @@ void* worker(void* arg)
         target = queueHead;
         queueHead = queueHead->next;
         queueSize--; 
-        ec_zero(pthread_cond_signal(&queueNotFull),"worker's signal on queueNotFull failed");
+        ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed");
         ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
         pthread_cleanup_pop(0); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
         printf("worker ha lavorato su %s\n",target->filename);
-        result = fileCalc(target->filename);
 
-        //sending the value
+        sqePointer=malloc(sizeof(sqElement));
+        ec_null(sqePointer,"worker failed to do a malloc");
+        sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,UNIX_PATH_MAX)+1));
+        ec_null(sqePointer->filename,"worker failed to do a malloc");
+        strncpy(sqePointer->filename,target->filename,UNIX_PATH_MAX);
+        sqePointer->val = fileCalc(target->filename);
+        sqePointer->next = NULL;
 
-        memset(buffer_write,'\0',265);
-        memcpy(buffer_write, target->filename, strlen(target->filename));    
-        memcpy(&(buffer_write[257]), &result,8); 
-        printf("TEST: %s\n",buffer_write);
-        accums=0;
-        do{
-            errno=0;
-            bytesWritten=0;
-            ec_meno1(bytesWritten=write(fdSKT, buffer_write, BUFFERSIZE),"!!worker dead on write!!\n"); 
-            accums+=bytesWritten;
-            printf("workes ha scritto %d/265\n",accums);
-        }while(accums<BUFFERSIZE);  
-        //end of sending
+        safeDeposit(sqePointer);
 
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
-
-        accums=0;
-        memset(ackHolder,0,4);
-        do
-        {
-            errno=0;
-            nread=0;
-            ec_meno1(nread=read(fdSKT,ackHolder,4),"worker dead on ack reading\n");
-            accums+=nread;
-        } while(accums<4);
-        printf("workers reeceived the ack: %s\n",ackHolder);
-
     }
-    //chiudo fdsKT???? 
-    //ec_meno1(close(fdSKT),errno);
-    //pthread_cleanup_pop(0);     //tolgo per clean up del socket
     pthread_exit(&retValue);
 }
 

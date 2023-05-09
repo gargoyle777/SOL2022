@@ -1,21 +1,24 @@
-#include <pthread.h>
 #ifndef WORKERTHREAD_H_
-#include <pthread.h>
 #define WORKERTHREAD_H_
+#include <pthread.h>
 
-struct queueEl
+#define UNIX_PATH_MAX 256
+#define BUFFERSIZE 265
+#define SOCKNAME "./farm.sck"
+
+typedef struct queueElementName
 {
     char *filename;
-    struct queueEl *next;
-};
+    struct queueElementName *next;
+} qElem;
 
 
 //variabili condivise
-extern struct queueEl *queueHead;
+extern qElem *queueHead;
 extern int queueSize;
 extern pthread_mutex_t mtx;
-extern pthread_cond_t queueNotFull;
-extern pthread_cond_t queueNotEmpty;
+extern pthread_cond_t queueFull;
+extern pthread_cond_t queueEmpty;
 extern int masterExitReq;
 
 

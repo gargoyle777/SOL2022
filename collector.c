@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/select.h>
 
 #define ec_meno1(s,m) \
@@ -39,7 +40,7 @@ void sigusr2_handler(int signum)
     flagEndReading= 1;
 }
 
-void checked_realloc(res **ptr, int length, size_t size)
+static void checked_realloc(res **ptr, int length, size_t size)
 {
     errno=0;
     if(length==1) 
@@ -56,9 +57,49 @@ void checked_realloc(res **ptr, int length, size_t size)
     printf("riuscita\n");
 }
 
+static int sendACK(int fdC)
+{
+    char ack[3]={'a','c','k'};
+    int bytesWritten = 0;
+    int totalBytesWritten = 0;
+    while( totalBytesWritten < 3 )
+    {
+        errno = 0;
+        bytesWritten = 0;
+        bytesWritten=write(fdC, ack, 3);
+        if(bytesWritten == -1) return -1;
+        totalBytesWritten+= bytesWritten;
+        printf("collector ha scritto %d/%d\n",totalBytesWritten,3);
+    }
+    return 0;
+}
+
+static int safeSocketRead(int fdC, void* buffer, uint8_t size)
+{
+    int byteRead=0;
+    int totalByteRead=0;
+    do
+    {
+        errno=0;
+        byteRead=0;
+        byteRead=read(fdC,buffer,size);
+        if (byteRead==-1)
+        {
+            printf("collector read ha dato errore\n");
+            close(fdC);
+            return -1;
+        }
+        totalByteRead+=byteRead;
+        printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
+    } while (totalByteRead<size);
+
+    if( sendACK(fdC) == -1 ) return -1;
+
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
-
 	printf("collector avviato\n");//testing
 
     sigset_t blockset;
@@ -79,34 +120,18 @@ int main(int argc, char* argv[])
     sigaddset(&blockset,SIGUSR2);
     sigprocmask(SIG_UNBLOCK,&blockset,NULL);
 
-    int maxworkers = atoi(argv[1]); //should be setted up when launched to the max workers number
-    int maxFD = 0;
     int i = 0; //counter
     int fdSKT;
     int fdC; 
-    int fd;
     fd_set set,rdset;
     struct sockaddr_un sa;
 
-    int numworkers=0;
-    int *allWorkersFd;
-	char ack[4]="ACK";
     res *resultArray;
-    int arraySize=0;
+    int arraySize=0;    //array of data
 
-    int nread=1;
-    char buffer[265];
-    long tmplong;
-    char *tmpname;
-    int c;
-    int accumulator=0;
-
-    ec_null(allWorkersFd = malloc(maxworkers*sizeof(int)),"failed to malloc allWorkersFd");
-    
-    for(c=0;c<maxworkers;c++)   //init to -1
-    {
-        allWorkersFd[c]=-1;
-    }
+    uint8_t nameSize;
+    char* fileName;
+    long fileValue;
 
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
@@ -118,143 +143,69 @@ int main(int argc, char* argv[])
     printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
-    ec_meno1(listen(fdSKT, maxworkers),(strerror(errno))); //somaxconn should be set on worker number
-    if(fdSKT > maxFD)   maxFD=fdSKT;
+    ec_meno1(listen(fdSKT, 2),(strerror(errno))); 
+
+    fdC = accept(fdSKT, NULL, 0);
+    ec_meno1(fdC,"collector morto sull'accept");
+
     printf("collector entra nel suo loop\n");
     while(!flagEndReading)
     {
-        FD_ZERO(&rdset);
-        if(numworkers < maxworkers) FD_SET(fdSKT,&rdset);
-        for(c=0;c<maxworkers;c++)
+        fileName= NULL;
+        nameSize=0u;
+        fileValue = 0;
+
+        if( safeSocketRead(fdC,&nameSize,1u) == -1)
         {
-            if(allWorkersFd[c] > -1)    FD_SET(allWorkersFd[c],&rdset);
+            //TODO: handle error
         }
 
-        if(select(maxFD+1,&rdset,NULL,NULL,NULL)==-1)
+        fileName = malloc(nameSize+1);
+        ec_null(fileName,"collector malloc failed for file name");
+        memset(fileName,0,nameSize+1);
+
+        ec_null(fileName,"collector failed to malloc");
+
+        if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
-            printf("collector's select exploded\n");
-            //tewpo di finire
-            for(c=0;c<maxworkers;c++)
-            {
-                if(allWorkersFd[c]!=-1)
-                {
-                    ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
-                    printf("collector ha chiuso il fd in posizione %d\n",c);
-                }
-            }
-
-            ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
-            qsort(resultArray,arraySize,sizeof(res),compare);
-            printf("collector ha raccolto %d elementi\n",arraySize);
-            for(i=0;i<arraySize;i++)
-            {
-                printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
-            }
-            for(i=0;i<arraySize;i++)
-            {
-                free(resultArray[i].name);
-            }
-            free(resultArray);
-            free(allWorkersFd);
-            ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
-            printf("---collector chiude dal select---\n");
-            return 2;   //testing
-
+            //TODO: handle error
         }
-        printf("collector sopravvissuto al select\n");
 
-        if(FD_ISSET(fdSKT,&rdset)) //socket connect ready
+        if( safeSocketRead(fdC,&fileValue,8u) == -1)
         {
-            printf("collector accettera' una connesione\n");
-            fdC = accept(fdSKT, NULL, 0);
-            ec_meno1(fdC,"collector morto sull'accept");
-            for(c=0;c<maxworkers;c++)
-            {
-                if(allWorkersFd[c]==-1)
-                {
-                    printf("nuova connessione messa in posizione %d\n",c);
-                    allWorkersFd[c] = fdC;
-                    c=maxworkers; 
-                    numworkers+=1;
-                }
-                else{
-                    printf(" gia' presente un file descriptor in posizione %d\n", c);
-                }
-            }
-            if(fdC > maxFD)   maxFD=fdC;
+            //TODO: handle error
         }
-        for(c=0;c<maxworkers;c++)
-        {
-            printf("collector fa il check del file descriptor in posizione %d\n",c);
-            if(flagEndReading)
-            {
-                break;  //flag end reading setted mean the collector needs to stop using the socket and just print the result
-            }
-            if(FD_ISSET(allWorkersFd[c],&rdset))
-            {
-                printf("collector si prepara a leggere dal file descriptor %d\n",c);
-                memset(buffer, '\0', BUFFERSIZE);      //zero the memory
-                accumulator=0;
-                do
-                {
-                    errno=0;
-                    nread=0;
-                    nread=read(fd,buffer,BUFFERSIZE);
-                    if (nread==-1)
-                    {
-                        printf("collector read ha dato errore\n");
-                        close(allWorkersFd[c]);
-                        allWorkersFd[c]=-1; //close the socket with him
-                        break;
-                    }
-                    printf("collector ha letto %d a questo giro, %d in totale\n",nread,accumulator );
-                    accumulator+=nread;
-                } while (accumulator<265);
-                printf("collector survived read\n");
-                arraySize++;
-                checked_realloc(&resultArray,arraySize, sizeof(res));     //realloc for result array
-                ec_null(resultArray,"collector's realloc for resultArray failed");
 
-                memcpy( &(resultArray[arraySize-1].value), &(buffer[BUFFERSIZE - 8]) , 8); //value is copied in the structure
-                resultArray[arraySize-1].name = (char*) malloc(strlen(buffer)+1); //there are at least a pair of \0 bewtween name and long value
-                ec_null(resultArray[arraySize - 1].name,"collector malloc failed for file name");
-                memset(resultArray[arraySize - 1].name, 0, strlen(buffer)+1);   //name is zeroed
-                memcpy(resultArray[arraySize - 1].name,buffer,strlen(buffer));        //name is saved in the structure
-                printf("collector ha raccolto <%s>",resultArray[arraySize - 1].name);
+        arraySize++;
+        checked_realloc(&resultArray,arraySize, sizeof(res));     //realloc for result array
 
-                //start ack
-                if(allWorkersFd[c]!=-1){
-                    ec_meno1(write(allWorkersFd[c], ack, 4),"collector morto per write fallita");    
-                    printf("collector ha risposto %s",ack);
-                }
-            }
-        }
+        resultArray[arraySize-1].value=fileValue;
+
+        resultArray[arraySize-1].name = fileName;
+
+        printf("collector ha raccolto <%s>",resultArray[arraySize - 1].name);
     }
 
     printf("collector e' fuori dal suo loop\n");
-    for(c=0;c<maxworkers;c++)
-    {
-        if(allWorkersFd[c]!=-1)
-        {
-            ec_meno1(close(allWorkersFd[c]),"collector failed to close a socket with a worker");
-            printf("collector ha chiuso il fd in posizione %d\n",c);
-        }
-    }
+ 
+    //TODO: CLOSE ALL SOCKET
 
-    ec_meno1(close(fdSKT),("collector failed to close the socket for accepting connection"));
     qsort(resultArray,arraySize,sizeof(res),compare);
+
     printf("collector ha raccolto %d elementi\n",arraySize);
+
     for(i=0;i<arraySize;i++)
     {
         printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
     }
+
     for(i=0;i<arraySize;i++)
     {
         free(resultArray[i].name);
     }
     free(resultArray);
-    free(allWorkersFd);
+
     ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
     printf("---collector chiude---\n");
-    return 3;   //testing
+    return 0;
 }
