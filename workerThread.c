@@ -78,13 +78,13 @@ static void safeDeposit(sqElement* target)
 {
     sqElement* tmp; 
     
-    pthread_cleanup_push(sender_lock_cleanup_handler);  //lock del sender
+    pthread_cleanup_push(sender_lock_cleanup_handler,NULL);  //lock del sender
     ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
 
     if( sqSize == 0)
     {
         sqHead = target;
-        pthread_cond_signal(sqEmpty);
+        pthread_cond_signal(&sqEmpty);
     }
     else
     {
@@ -118,8 +118,8 @@ void* worker(void* arg)
     while(flagwork==1)
     {
         sqePointer = NULL;
-        ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
-        pthread_cleanup_push(producer_lock_cleanup_handler);       //spingo cleanup per lock
+        ec_zero(pthread_mutex_lock(&mtx,NULL),"worker's lock failed");
+        pthread_cleanup_push(producer_lock_cleanup_handler,NULL);       //spingo cleanup per lock
 
         while(queueSize==0 && masterExitReq==0)
         {
