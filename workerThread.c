@@ -118,7 +118,7 @@ void* worker(void* arg)
     while(flagwork==1)
     {
         sqePointer = NULL;
-        ec_zero(pthread_mutex_lock(&mtx,NULL),"worker's lock failed");
+        ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
         pthread_cleanup_push(producer_lock_cleanup_handler,NULL);       //spingo cleanup per lock
 
         while(queueSize==0 && masterExitReq==0)
