@@ -33,3 +33,5 @@ extern sqElement *sqHead;
 extern int sqSize;
 extern pthread_mutex_t sendermtx;
 extern pthread_cond_t sqEmpty;
+
+#endif
