@@ -99,6 +99,8 @@ static int safeSocketRead(int fdC, void* buffer, uint8_t size)
         printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
 
+    if(size ==1) printf("collector ha letto:%d\n", *buffer);
+    if(size ==8) printf("collector ha letto:%ld\n", *buffer);
     if( sendACK(fdC) == -1 ) return -1;
 
     return 0;
