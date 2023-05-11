@@ -158,7 +158,7 @@ void* producerWorker(void* arg)
         sqePointer->next = NULL;
 
         safeDeposit(sqePointer);
-
+        printf("worker ha finito di dare in pasto a sender");
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
     pthread_exit(&retValue);

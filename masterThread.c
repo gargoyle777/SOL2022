@@ -126,7 +126,7 @@ void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recu
     printf("scavo in una directory\n"); //testing
 
     errno = 0;
-    ec_null(openedDir = opendir(path),"opendir failed ");
+    ec_null(openedDir = opendir(path),path);
 
     while ((freshDir=readdir(openedDir)) != NULL) //TODO SUCCEDE BORDELLO CON IL PATH
     {
@@ -323,6 +323,9 @@ int main(int argc, char* argv[])
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
 
+    printf("master inizia il join di sender");
+    ec_zero(pthread_join(senderThread, NULL),"pthread_join failed");
+
     printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
     {
@@ -349,5 +352,5 @@ int main(int argc, char* argv[])
     
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
-    printf("master ha aspettato il collector\n---master chiude---");
+    printf("master ha aspettato il collector\n---master chiude---\n");
 }
