@@ -89,7 +89,7 @@ static void safeWrite(int socketFD, void* file, uint8_t size)
 {
     int bytesWritten = 0;
     int totalBytesWritten = 0;
-    if( size == 8u ) printf("sender sta per inviare il long: %ld", *(long*) file);
+    if( size == 8u ) printf("sender sta per inviare il long: %ld\n", *(long*) file);
     while( totalBytesWritten < size )
     {
         errno = 0;

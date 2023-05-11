@@ -62,6 +62,7 @@ static long fileCalc(char* fileAddress)
         i++;
     }
     pthread_cleanup_pop(1); //true per fare il fclose
+    printf("worker ha calcolato il valore: %ld\n", result);
     return result;
 }
 
