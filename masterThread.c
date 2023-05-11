@@ -165,7 +165,6 @@ int main(int argc, char* argv[])
     struct sigaction sa;
 
     queueSize = 0;
-    qElem * tmpPointer;
     pthread_mutex_init(&mtx,NULL);
     ec_zero(pthread_cond_init(&queueFull, NULL),"pthread_cond_init failed on condition queueFull");
     ec_zero(pthread_cond_init(&queueEmpty, NULL),"pthread_cond_init failed on condition queueEmpty");
@@ -302,6 +301,7 @@ int main(int argc, char* argv[])
     {
         printf("master si occupa di %s\n",fileList[i]);
         insertElementQueue(fileList[i],qlen);
+        usleep(delay);
     }
    
     ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
@@ -353,4 +353,5 @@ int main(int argc, char* argv[])
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     printf("master ha aspettato il collector\n---master chiude---\n");
+    return 0;
 }
