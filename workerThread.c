@@ -56,7 +56,7 @@ static long fileCalc(char* fileAddress)
     file = fopen(fileAddress, "rb"); 
     ec_null(file,(strerror(errno)));
     
-    while(fread(&tmp, sizeof(long),1,file) == sizeof(long))
+    while(fread(&tmp, sizeof(long),1,file) == 1)
     {
         result = result + (tmp * i);
         i++;
