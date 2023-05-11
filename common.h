@@ -19,8 +19,8 @@ typedef struct sendQueueElement
     struct sendQueueElement *next;
 } sqElement;
 
-extern const int errorRetValue=1; //TODO: move to .c
-extern const int retValue=0; //TODO: move to .c
+extern int errorRetValue; 
+extern int retValue; 
 
 //variabili condivise
 extern qElem *queueHead;
