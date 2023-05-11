@@ -84,7 +84,7 @@ static void safeACK(int socketFD)
     }
 }
 
-static void safeWrite(int socketFD, void* file, uint8_t size)
+static void safeWrite(int socketFD, void* file, int size)
 {
     int bytesWritten = 0;
     int totalBytesWritten = 0;
@@ -101,13 +101,13 @@ static void safeWrite(int socketFD, void* file, uint8_t size)
 
 static void safeSend(int socketFD, sqElement element)
 {
-    uint8_t nameLength; //null termination not counted, max size is 256
+    int nameLength; //null termination not counted, max size is 256
     nameLength = strnlen(element.filename,MAX_PATH_LENGTH);
-    safeWrite(socketFD,&nameLength,1u);
+    safeWrite(socketFD,&nameLength,sizeof(int));
     safeACK(socketFD);
     safeWrite(socketFD,element.filename,nameLength);
     safeACK(socketFD);
-    safeWrite(socketFD,&(element.val),8u);
+    safeWrite(socketFD,&(element.val),sizeof(int));
     safeACK(socketFD);
 }
 

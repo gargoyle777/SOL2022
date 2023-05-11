@@ -72,7 +72,7 @@ static int sendACK(int fdC)
     return 0;
 }
 
-static int safeSocketRead(int fdC, void* buffer, uint8_t size)
+static int safeSocketRead(int fdC, void* buffer, int size)
 {
     int byteRead=0;
     int totalByteRead=0;
@@ -97,8 +97,6 @@ static int safeSocketRead(int fdC, void* buffer, uint8_t size)
         printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
 
-    if(size ==1) printf("collector ha letto:%d\n", * (int*)buffer);
-    if(size ==8) printf("collector ha letto:%ld\n", * (long*)buffer);
     if( sendACK(fdC) == -1 ) return -1;
 
     return 0;
@@ -156,7 +154,7 @@ int main(int argc, char* argv[])
     res *resultArray;
     int arraySize=0;    //array of data
 
-    uint8_t nameSize;
+    int nameSize;
     char* fileName;
     long fileValue;
 
@@ -180,7 +178,7 @@ int main(int argc, char* argv[])
         nameSize=0u;
         fileValue = 0;
 
-        if( safeSocketRead(fdC,&nameSize,1u) == -1)
+        if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
         {
             printf("collector read fatal error,ecco output fin'ora\n");
             produceOutput(resultArray,arraySize);
