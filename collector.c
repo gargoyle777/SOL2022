@@ -89,6 +89,11 @@ static int safeSocketRead(int fdC, void* buffer, uint8_t size)
             close(fdC);
             return -1;
         }
+        if(byteRead==0)
+        {
+            printf("collector read dice EOF\n");
+            return -1;
+        }
         totalByteRead+=byteRead;
         printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
@@ -143,7 +148,7 @@ int main(int argc, char* argv[])
     printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
-    ec_meno1(listen(fdSKT, 2),(strerror(errno))); 
+    ec_meno1(listen(fdSKT, 1),(strerror(errno))); 
 
     fdC = accept(fdSKT, NULL, 0);
     ec_meno1(fdC,"collector morto sull'accept");
@@ -157,6 +162,8 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,&nameSize,1u) == -1)
         {
+            print("collector read fatal error");
+            return 0;
             //TODO: handle error
         }
 
@@ -168,11 +175,15 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
+            print("collector read fatal error");
+            return 0;
             //TODO: handle error
         }
 
         if( safeSocketRead(fdC,&fileValue,8u) == -1)
         {
+            print("collector read fatal error");
+            return 0;
             //TODO: handle error
         }
 

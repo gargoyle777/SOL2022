@@ -148,7 +148,7 @@ void* senderWorker(void* arg)
         pthread_cleanup_pop(1); // faccio il free dei valori
     }
 
-    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(0); //TODO: maybe closed to early? should be one lets keep it at 0 for testing
 
     pthread_exit(&retValue);
 }
