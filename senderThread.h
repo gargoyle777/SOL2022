@@ -3,6 +3,6 @@
 
 #include <pthread.h>
 
-void* worker(void *arg);
+void* senderWorker(void *arg);
 
 #endif

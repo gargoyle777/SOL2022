@@ -2,6 +2,6 @@
 #define WORKERTHREAD_H_
 #include <pthread.h>
 
-void* worker(void *arg);
+void* producerWorker(void *arg);
 
 #endif
