@@ -170,9 +170,9 @@ int main(int argc, char* argv[])
     ec_zero(pthread_cond_init(&queueFull, NULL),"pthread_cond_init failed on condition queueFull");
     ec_zero(pthread_cond_init(&queueEmpty, NULL),"pthread_cond_init failed on condition queueEmpty");
 
-
-    pthread_t *tSlaves;
     pthread_t senderThread;
+    pthread_t *tSlaves;
+    
 
     int i;  //counter
     char **fileList;

@@ -48,7 +48,7 @@ static int safeConnect() //return the socket file descriptor
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     errno=0;
     ec_meno1(fdSKT,(strerror(errno)));
-    printf("sender socket() worked\n");
+    printf("sender socket() ha funzionato\n");
     counter=0;
     checker=0;
     while(counter<5)
@@ -132,6 +132,7 @@ static void safeExtract(sqElement** target)
 
 void* senderWorker(void* arg)
 {
+    printf("sender avviato\n");
     int fdSKT; //file descriptor socket
     int flagWork=1;
     sqElement* target;

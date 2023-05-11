@@ -85,7 +85,7 @@ static void safeDeposit(sqElement* target)
         tmp->next = target;
     }
     sqSize++;
-    printf("worker ha depositato, rilascia il lock");
+    printf("worker ha depositato, rilascia il lock\n");
     pthread_cleanup_pop(1); //rilascio il lock
 }
 
@@ -136,8 +136,7 @@ void* producerWorker(void* arg)
         queueHead = queueHead->next;
         queueSize--; 
         ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed");
-        ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
-        pthread_cleanup_pop(0); //tolgo per cleanup del lock
+        pthread_cleanup_pop(1); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
         printf("worker sta lavorando su %s\n",target->filename);
 
