@@ -214,7 +214,6 @@ int main(int argc, char* argv[])
     }
     free(resultArray);
 
-    ec_meno1(unlink(SOCKNAME),"collector error when unlinking the socket"); //should make sure the socket file is gone when closing TESTING
     printf("---collector chiude---\n");
     return 0;
 }

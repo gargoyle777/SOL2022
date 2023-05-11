@@ -112,8 +112,9 @@ static void safeSend(int socketFD, sqElement element)
 
 static void safeExtract(sqElement** target)
 {
-    ec_zero(pthread_mutex_lock(&sendermtx),"sender's lock failed");
+
     pthread_cleanup_push(lock_cleanup_handler, NULL); 
+    ec_zero(pthread_mutex_lock(&sendermtx),"sender's lock failed");
 
     while( sqSize <= 0)
     {
@@ -132,13 +133,16 @@ static void safeExtract(sqElement** target)
 void* senderWorker(void* arg)
 {
     int fdSKT; //file descriptor socket
+    int flagWork=1;
     sqElement* target;
 
     fdSKT = safeConnect();
 
     pthread_cleanup_push(socket_cleanup_handler, &fdSKT);
-    while( 1 )
+
+    while( flagWork == 1 )
     {
+        if(masterExitReq != 0 && )
         safeExtract(&target);
 
         pthread_cleanup_push(target_cleanup_handler, &target); 
@@ -146,6 +150,8 @@ void* senderWorker(void* arg)
         safeSend(fdSKT,*target);
 
         pthread_cleanup_pop(1); // faccio il free dei valori
+
+        if(masterExitReq != 0 && sqSize == 0) flagWork =0;
     }
 
     pthread_cleanup_pop(0); //TODO: maybe closed to early? should be one lets keep it at 0 for testing

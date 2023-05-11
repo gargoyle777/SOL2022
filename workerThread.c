@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -73,6 +72,7 @@ static void safeDeposit(sqElement* target)
     pthread_cleanup_push(sender_lock_cleanup_handler,NULL);  //lock del sender
     ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
 
+    printf("worker ha il sender lock, cerca di depositare\n");
     if( sqSize == 0)
     {
         sqHead = target;
@@ -85,6 +85,7 @@ static void safeDeposit(sqElement* target)
         tmp->next = target;
     }
     sqSize++;
+    printf("worker ha depositato, rilascia il lock");
     pthread_cleanup_pop(1); //rilascio il lock
 }
 
