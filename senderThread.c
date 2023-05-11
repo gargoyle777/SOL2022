@@ -57,7 +57,7 @@ static int safeConnect() //return the socket file descriptor
         checker=0;
         if(checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)) ==-1)
         {
-            printf(" sender failed to connect: %d",counter);
+            printf("sender failed to connect: %d\n",counter);
             sleep(1);
             counter+=1;
         }
@@ -78,7 +78,7 @@ static void safeACK(int socketFD)
     {
         errno=0;
         bytesRead = 0;
-        c_meno1(bytesRead=read(socketFD,ackHolder,3),"sender dead on ack read\n");
+        ec_meno1(bytesRead=read(socketFD,ackHolder,3),"sender dead on ack read\n");
         totalBytesRead+= bytesRead;
         printf("sender ha ricevuto un ACK\n");
     }

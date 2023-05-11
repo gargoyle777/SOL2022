@@ -147,13 +147,13 @@ void* producerWorker(void* arg)
         ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed");
         pthread_cleanup_pop(0); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
-        printf("worker ha lavorato su %s\n",target->filename);
+        printf("worker sta lavorando su %s\n",target->filename);
 
         sqePointer=malloc(sizeof(sqElement));
         ec_null(sqePointer,"worker failed to do a malloc");
         sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,UNIX_PATH_MAX)+1));
         ec_null(sqePointer->filename,"worker failed to do a malloc");
-        strncpy(sqePointer->filename,target->filename,UNIX_PATH_MAX);
+        strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
         sqePointer->val = fileCalc(target->filename);
         sqePointer->next = NULL;
 
