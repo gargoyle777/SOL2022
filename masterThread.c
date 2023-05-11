@@ -10,6 +10,7 @@
 #include <signal.h>
 #include "workerThread.h"
 #include <sys/wait.h>
+#include "common.h"
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror("master"); exit(EXIT_FAILURE); }    

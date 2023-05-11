@@ -8,16 +8,6 @@ typedef struct queueElementName
     struct queueElementName *next;
 } qElem;
 
-
-//variabili condivise
-extern qElem *queueHead;
-extern int queueSize;
-extern pthread_mutex_t mtx;
-extern pthread_cond_t queueFull;
-extern pthread_cond_t queueEmpty;
-extern int masterExitReq;
-
-
 void* worker(void *arg);
 
 #endif

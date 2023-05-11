@@ -1,0 +1,20 @@
+#ifndef COMMON_H_
+#define COMMON_H_
+#include <pthread.h>
+
+#define UNIX_PATH_MAX 256
+#define BUFFERSIZE 265
+#define SOCKNAME "./farm.sck"
+
+//variabili condivise
+extern qElem *queueHead;
+extern int queueSize;
+extern pthread_mutex_t mtx;
+extern pthread_cond_t queueFull;
+extern pthread_cond_t queueEmpty;
+extern int masterExitReq;
+
+extern sqElement *sqHead;
+extern int sqSize;
+extern pthread_mutex_t sendermtx;
+extern pthread_cond_t sqEmpty;
