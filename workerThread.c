@@ -14,9 +14,6 @@
 #include "workerThread.h"
 #include "common.h"
 
-int errorRetValue=1;
-int retValue=0;
-
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
@@ -91,7 +88,7 @@ static void safeDeposit(sqElement* target)
     pthread_cleanup_pop(1); //rilascio il lock
 }
 
-void* worker(void* arg)
+void* producerWorker(void* arg)
 {
     printf("worker avviato\n");
     int accums;

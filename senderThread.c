@@ -12,9 +12,6 @@
 #include "senderThread.h"
 #include "common.h"
 
-int errorRetValue=1;
-int retValue=0;
-
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
 #define ec_null(s,m) \
@@ -132,7 +129,7 @@ static void safeExtract(sqElement** target)
     pthread_cleanup_pop(1); //free the lock using true value as parameter
 }
 
-void* worker(void* arg)
+void* senderWorker(void* arg)
 {
     int fdSKT; //file descriptor socket
     sqElement* target;
