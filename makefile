@@ -6,11 +6,11 @@ collector: collector.c
 masterThread: masterThread.c workerThread.o senderThread.o common.o
 	gcc -Wall -Werror -o farm masterThread.c common.o workerThread.o senderThread.o -g -lpthread
 
-workerThread.o: workerThread.c common.o
-	gcc -Wall -Werror -c workerThread.c common.o -g -lpthread
+workerThread.o: workerThread.c
+	gcc -Wall -Werror -c workerThread.c -g -lpthread
 
-senderThread.o: senderThread.c common.o
-	gcc -Wall -Werror -c senderThread.c common.o -g -lpthread
+senderThread.o: senderThread.c
+	gcc -Wall -Werror -c senderThread.c -g -lpthread
 
 common.o: common.c
 	gcc -Wall -Werror -c common.c -g -lpthread

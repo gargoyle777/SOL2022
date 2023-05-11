@@ -92,7 +92,8 @@ static int safeSocketRead(int fdC, void* buffer, uint8_t size)
         if(byteRead==0)
         {
             printf("collector read dice EOF\n");
-            return -1;
+            flagEndReading = 1;
+            return 0;
         }
         totalByteRead+=byteRead;
         printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
@@ -101,6 +102,29 @@ static int safeSocketRead(int fdC, void* buffer, uint8_t size)
     if( sendACK(fdC) == -1 ) return -1;
 
     return 0;
+}
+
+static void freeResultsArray(res **resultArray, int arraySize)
+{
+    int i;
+    for(i=0;i<arraySize;i++)
+    {
+        free((*resultArray)[i].name);
+    }
+    free(*resultArray);
+}
+
+static void produceOutput(res *resultArray, int arraySize)
+{
+    int i;
+    qsort(resultArray,arraySize,sizeof(res),compare);
+
+    printf("collector ha raccolto %d elementi\n",arraySize);
+
+    for(i=0;i<arraySize;i++)
+    {
+        printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -125,7 +149,6 @@ int main(int argc, char* argv[])
     sigaddset(&blockset,SIGUSR2);
     sigprocmask(SIG_UNBLOCK,&blockset,NULL);
 
-    int i = 0; //counter
     int fdSKT;
     int fdC; 
     struct sockaddr_un sa;
@@ -159,7 +182,9 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,&nameSize,1u) == -1)
         {
-            printf("collector read fatal error\n");
+            printf("collector read fatal error,ecco output fin'ora\n");
+            produceOutput(resultArray,arraySize);
+            freeResultsArray(&resultArray, arraySize);
             return 0;
             //TODO: handle error
         }
@@ -191,27 +216,16 @@ int main(int argc, char* argv[])
 
         resultArray[arraySize-1].name = fileName;
 
-        printf("collector ha raccolto <%s>",resultArray[arraySize - 1].name);
+        printf("collector ha raccolto: %s\n",resultArray[arraySize - 1].name);
     }
 
     printf("collector e' fuori dal suo loop\n");
  
     //TODO: CLOSE ALL SOCKET
 
-    qsort(resultArray,arraySize,sizeof(res),compare);
+    produceOutput(resultArray,arraySize);
 
-    printf("collector ha raccolto %d elementi\n",arraySize);
-
-    for(i=0;i<arraySize;i++)
-    {
-        printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
-    }
-
-    for(i=0;i<arraySize;i++)
-    {
-        free(resultArray[i].name);
-    }
-    free(resultArray);
+    freeResultsArray(&resultArray, arraySize);
 
     printf("---collector chiude---\n");
     return 0;
