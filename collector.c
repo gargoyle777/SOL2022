@@ -20,7 +20,7 @@
 
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 265
-#define UNIX_PATH_MAX 255
+#define UNIX_PATH_MAX 108
 
 volatile sig_atomic_t flagEndReading= 0;
 
@@ -128,7 +128,6 @@ int main(int argc, char* argv[])
     int i = 0; //counter
     int fdSKT;
     int fdC; 
-    fd_set set,rdset;
     struct sockaddr_un sa;
 
     res *resultArray;

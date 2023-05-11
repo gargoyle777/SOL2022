@@ -2,7 +2,8 @@
 #define COMMON_H_
 #include <pthread.h>
 
-#define UNIX_PATH_MAX 256
+#define UNIX_PATH_MAX 108
+#define MAX_PATH_LENGTH 256
 #define BUFFERSIZE 265
 #define SOCKNAME "./farm.sck"
 

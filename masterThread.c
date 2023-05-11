@@ -87,9 +87,9 @@ static void insertElementQueue(char* target, int queueUpperLimit)
         queueHead = malloc(sizeof(qElem));
         ec_null(queueHead,"malloc of queueHead failed");
         queueHead->next = NULL;
-        queueHead->filename = malloc(strnlen(target,UNIX_PATH_MAX)+1);
-        memset(queueHead->filename,0,strnlen(target,UNIX_PATH_MAX)+1);
-        strncpy(queueHead->filename, target, strnlen(target,UNIX_PATH_MAX)+1);  
+        queueHead->filename = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
+        memset(queueHead->filename,0,strnlen(target,MAX_PATH_LENGTH)+1);
+        strncpy(queueHead->filename, target, strnlen(target,MAX_PATH_LENGTH)+1);  
         queueSize = 1;
         printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
     }
@@ -104,9 +104,9 @@ static void insertElementQueue(char* target, int queueUpperLimit)
         ec_null(tmpPointer->next,"malloc of an element of the queue failed");
         tmpPointer = tmpPointer->next;
         tmpPointer->next = NULL;
-        tmpPointer->filename = malloc( strnlen(target,UNIX_PATH_MAX)+1);
-        memset(tmpPointer->filename,0, strnlen(target,UNIX_PATH_MAX)+1);
-        strncpy(tmpPointer->filename, target,  strnlen(target,UNIX_PATH_MAX)+1);  
+        tmpPointer->filename = malloc( strnlen(target,MAX_PATH_LENGTH)+1);
+        memset(tmpPointer->filename,0, strnlen(target,MAX_PATH_LENGTH)+1);
+        strncpy(tmpPointer->filename, target,  strnlen(target,MAX_PATH_LENGTH)+1);  
         queueSize++;
     }
 

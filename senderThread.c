@@ -54,8 +54,9 @@ static int safeConnect() //return the socket file descriptor
     while(counter<5)
     {
         errno=0;
-        checker=0;
-        if(checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa)) ==-1)
+        checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa));
+
+        if(checker==-1)
         {
             printf("sender failed to connect: %d\n",counter);
             sleep(1);
@@ -101,7 +102,7 @@ static void safeWrite(int socketFD, void* file, uint8_t size)
 static void safeSend(int socketFD, sqElement element)
 {
     uint8_t nameLength; //null termination not counted, max size is 256
-    nameLength = strnlen(element.filename,UNIX_PATH_MAX);
+    nameLength = strnlen(element.filename,MAX_PATH_LENGTH);
     safeWrite(socketFD,&nameLength,1u);
     safeACK(socketFD);
     safeWrite(socketFD,element.filename,nameLength);

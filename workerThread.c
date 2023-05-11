@@ -93,9 +93,6 @@ void* producerWorker(void* arg)
 {
     printf("worker avviato\n");
     int flagwork=1;
-    char charLong[21];
-    char *tmpString;
-    long result;
     sqElement *sqePointer;
     qElem* target;
     
@@ -142,7 +139,7 @@ void* producerWorker(void* arg)
 
         sqePointer=malloc(sizeof(sqElement));
         ec_null(sqePointer,"worker failed to do a malloc");
-        sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,UNIX_PATH_MAX)+1));
+        sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,MAX_PATH_LENGTH)+1));
         ec_null(sqePointer->filename,"worker failed to do a malloc");
         strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
         sqePointer->val = fileCalc(target->filename);
