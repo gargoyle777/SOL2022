@@ -92,19 +92,10 @@ static void safeDeposit(sqElement* target)
 void* producerWorker(void* arg)
 {
     printf("worker avviato\n");
-    int accums;
-    int bytesWritten=0;
-    char buffer_write[265];
     int flagwork=1;
     char charLong[21];
     char *tmpString;
     long result;
-    int fdSKT;
-    struct sockaddr_un sa;
-    char ackHolder[4];
-    strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
-    sa.sun_family = AF_UNIX;
-    int nread;
     sqElement *sqePointer;
     qElem* target;
     

@@ -142,11 +142,12 @@ void* senderWorker(void* arg)
 
     while( flagWork == 1 )
     {
-        if(masterExitReq != 0 && )
+        printf("sender prova a estrarre il target\n");
         safeExtract(&target);
 
         pthread_cleanup_push(target_cleanup_handler, &target); 
         
+        printf("sender prova a mandare il target\n");
         safeSend(fdSKT,*target);
 
         pthread_cleanup_pop(1); // faccio il free dei valori
@@ -154,6 +155,7 @@ void* senderWorker(void* arg)
         if(masterExitReq != 0 && sqSize == 0) flagWork =0;
     }
 
+    printf("sender chiude \n");
     pthread_cleanup_pop(0); //TODO: maybe closed to early? should be one lets keep it at 0 for testing
 
     pthread_exit(&retValue);
