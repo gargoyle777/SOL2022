@@ -9,7 +9,7 @@ masterThread: masterThread.c workerThread.o senderThread.o common.o
 workerThread.o: workerThread.c common.o
 	gcc -c workerThread.c common.o -g -lpthread
 
-senderThread.o: senderThread.c coomon.o
+senderThread.o: senderThread.c common.o
 	gcc -c senderThread.c common.o -g -lpthread
 
 common.o: common.c
