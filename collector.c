@@ -142,10 +142,8 @@ int main(int argc, char* argv[])
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
-
-    //ec_meno1(unlink(SOCKNAME),(strerror(errno))); //should make sure the socket file is gone when closing TESTING
-
     printf("collector prova a bindare\n");
+    unlink(SOCKNAME); //clean the file
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
     ec_meno1(listen(fdSKT, 1),(strerror(errno))); 
@@ -162,7 +160,7 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,&nameSize,1u) == -1)
         {
-            print("collector read fatal error");
+            printf("collector read fatal error\n");
             return 0;
             //TODO: handle error
         }
@@ -175,14 +173,14 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
-            print("collector read fatal error");
+            printf("collector read fatal error\n");
             return 0;
             //TODO: handle error
         }
 
         if( safeSocketRead(fdC,&fileValue,8u) == -1)
         {
-            print("collector read fatal error");
+            printf("collector read fatal error\n");
             return 0;
             //TODO: handle error
         }

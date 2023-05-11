@@ -257,7 +257,7 @@ int main(int argc, char* argv[])
                 ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
 
                 strcpy(fileList[sizeFileList-1],argv[ac]);
-                printf("***file digerito: %s ***\n",fileList[sizeFileList - 1]); //testing
+                printf("master ha digerito: %s \n",fileList[sizeFileList - 1]); //testing
             }
         }
     }
@@ -323,7 +323,7 @@ int main(int argc, char* argv[])
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
 
-    printf("master inizia il join di sender");
+    printf("master inizia il join di sender\n");
     ec_zero(pthread_join(senderThread, NULL),"pthread_join failed");
 
     printf("master ha finito di fare i join\n");
