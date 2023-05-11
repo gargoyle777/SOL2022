@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
         ec_zero(pthread_create(&(tSlaves[i]), NULL, &producerWorker, NULL), "ptread_create failure");  
     }
 
-    ec_zero(pthread_create((&senderThread), NULL, &senderWorker, NULL), "pthread_create failure");
+    ec_zero(pthread_create(&senderThread, NULL, &senderWorker, NULL), "pthread_create failure");
     
     //START producing
 	printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
