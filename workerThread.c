@@ -24,12 +24,7 @@ int retValue=0;
 #define ec_zero(s,m) \
     if((s) != 0) { perror("WORKER"); pthread_exit(&errorRetValue); }
 
-qElem *queueHead=NULL;
-int queueSize=0;
-pthread_mutex_t mtx;
-pthread_cond_t queueFull;
-pthread_cond_t queueEmpty;
-int masterExitReq=0;
+
 
 
 static void sender_lock_cleanup_handler(void* arg)

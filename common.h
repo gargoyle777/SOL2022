@@ -20,7 +20,6 @@ typedef struct sendQueueElement
 } sqElement;
 
 
-
 //variabili condivise
 extern qElem *queueHead;
 extern int queueSize;

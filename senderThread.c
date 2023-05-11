@@ -22,11 +22,6 @@ int retValue=0;
 #define ec_zero(s,m) \
     if((s) != 0) { perror("WORKER"); pthread_exit(&errorRetValue); }
 
-sqElement *sqHead=NULL;
-int sqSize=0;
-pthread_mutex_t sendermtx;
-pthread_cond_t sqEmpty;
-
 static void lock_cleanup_handler(void* arg)
 {
     ec_zero(pthread_mutex_unlock(&sendermtx),"sender's unlock failed during cleanup");
