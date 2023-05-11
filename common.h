@@ -6,6 +6,21 @@
 #define BUFFERSIZE 265
 #define SOCKNAME "./farm.sck"
 
+typedef struct queueElementName
+{
+    char *filename;
+    struct queueElementName *next;
+} qElem;
+
+typedef struct sendQueueElement
+{
+    char *filename;
+    long val;
+    struct sendQueueElement *next;
+} sqElement;
+
+
+
 //variabili condivise
 extern qElem *queueHead;
 extern int queueSize;

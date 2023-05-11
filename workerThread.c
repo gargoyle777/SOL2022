@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "workerThread.h"
-#include "senderThread.h"
+#include "common.h"
 
 int errorRetValue=1;
 int retValue=0;
