@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <unistd.h>
 #include "workerThread.h"
 #include "common.h"
 

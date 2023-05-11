@@ -7,8 +7,6 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <string.h>
-#include <stdint.h>
-#include <sys/select.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE);}    

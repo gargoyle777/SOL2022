@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <string.h>
 #include <signal.h>
@@ -174,16 +173,17 @@ int main(int argc, char* argv[])
     
 
     int i;  //counter
+    int opt;
     char **fileList;
     int sizeFileList = 0;
     char **dirList;
     int sizeDirList = 0;
     int ac; //counts how many argument i have checked
     int nthread = 4;       //default is 4
-    char* charnthread="4";
     int qlen = 8;       //default is 8
     int dirFlag = 0;        //check for directory
     int delay = 0;        //default is 0
+    char* inputtedDirectory; //default is non present
 
     //start signal masking
     ec_meno1(sigfillset(&set),(strerror(errno)));
@@ -206,6 +206,35 @@ int main(int argc, char* argv[])
     //END signal handling
 
 	printf("sto per parsare\n");//testing
+
+    /*new parse
+    while(( opt = getopt(argc, argv, "n:q:t:d:") ) !=-1)
+    {
+        switch(opt) 
+        {
+            case 'n':   //number of thread
+                nthread = atoi(optarg);
+                break;
+            case 'q':   //concurrent queue's length
+                qlen = atoi(optarg);
+                break;
+            case 't':
+                dirFlag = 1;  
+                inputtedDirectory = malloc(strnlen(optarg,MAX_PATH_LENGTH)+1);
+                strncpy(inputtedDirectory,optarg,MAX_PATH_LENGTH);
+                break;
+            case 'd': //delay
+                delay = atoi(optarg);
+                break; 
+            case '?': //invalid option
+        }
+    }
+
+    while (optind < argc) {
+        printf("Argument: %s\n", argv[optind]);
+        optind++;
+    }
+*/
     //START parsing 
 
     for(ac = 1; ac<argc; ac++) //0 is filename          TODO:should check if file list is 0 only when -d is present
@@ -217,7 +246,6 @@ int main(int argc, char* argv[])
             case 'n':       //number of thread
                 ac++;
                 nthread = atoi(argv[ac]);
-                charnthread=argv[ac];
                 break;
             case 'q':       //concurrent line's length
                 ac++;
@@ -265,7 +293,7 @@ int main(int argc, char* argv[])
 
     //START collector process
     char *collectorPath="./collector";
-    char *collectorArgs[]={collectorPath,charnthread,NULL};
+    char *collectorArgs[]={collectorPath,NULL};
     int pid;
     pid= fork();
     ec_meno1(pid,(strerror(errno)));
@@ -349,6 +377,8 @@ int main(int argc, char* argv[])
         printf("faccio il free di dir list\n");
         free(dirList);
     }   
+    
+    if(dirFlag == 1) free (inputtedDirectory);
     
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
