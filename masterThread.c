@@ -202,15 +202,22 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     {
         if(entry->d_type == DT_DIR)
         {
-            //strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
-            //newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
-            //strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
-            printf("digging deeper: %s\n",entry->d_name);
-            directoryDigger(entry->d_name, fileList, sizeFileList);
+            if(entry->d_name[0]=='.')   continue;
+            memset(newPath,0,MAX_PATH_LENGTH);
+            strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
+            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
+            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
+            printf("digging deeper: %s\n",newPath);
+            directoryDigger(newPath, fileList, sizeFileList);
         }
         else
         {
-            checkAndAdd(fileList, entry->d_name, sizeFileList);
+            memset(newPath,0,MAX_PATH_LENGTH);
+            strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
+            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';   //newpath as a tmp value here
+            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
+            printf("digging deeper: %s\n",newPath);
+            checkAndAdd(fileList, newPath, sizeFileList);
         }
     }
     errno=0;
@@ -263,6 +270,8 @@ int main(int argc, char* argv[])
     char* inputtedDirectory; //default is non present
     int pid;
     char* tmpTarget;
+    qElem* tmpqh;
+    sqElement* tmpsh;
 
     //start signal masking
     ec_meno1(sigfillset(&set),(strerror(errno)));
@@ -333,7 +342,7 @@ int main(int argc, char* argv[])
     
     if(dirFlag == 1) 
     {
-        printf("sto per iniziare a scavare");
+        printf("sto per iniziare a scavare\n");
         directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
     }
     
@@ -393,6 +402,29 @@ int main(int argc, char* argv[])
     }
     free(fileList);
     free(tSlaves);
+
+    //master check for unfreed stacks
+    if(queueHead !=NULL)
+    {
+        while(queueHead != NULL)
+        {
+            tmpqh=queueHead;
+            queueHead= queueHead->next;
+            free(tmpqh->filename);
+            free(tmpqh);
+        }
+    }
+
+    if(sqHead != NULL)
+    {
+        while(sqHead != NULL)
+        {
+            tmpsh=sqHead;
+            sqHead= sqHead->next;
+            free(tmpsh->filename);
+            free(tmpsh);
+        }
+    }
 
     printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
