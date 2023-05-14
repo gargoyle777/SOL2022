@@ -135,11 +135,11 @@ static int startCollectorProcess()
 
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
-    checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
-    fileList[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
-    ec_null(fileList[*sizeFileList] ,"malloc fallita, stringa di elemento di fileList non allocato");
-    strncpy( fileList[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
-    printf("master ha digerito: %s \n",fileList[*sizeFileList]); //testing
+    checked_realloc(*fileList, (*sizeFileList) + 1, sizeof(char*));
+    (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
+    ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
+    strncpy( (*fileList)[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
+    printf("master ha digerito: %s \n",(*fileList)[*sizeFileList]); //testing
     (*sizeFileList) ++;
 }
 
@@ -157,23 +157,23 @@ static int containsWildcard(char* target)
 static int checkFile(char* target)
 {
     struct stat fileInfo;
-    if (stat(target, &file_info) == 0) 
+    int result = 0;
+    if (stat(target, &fileInfo) == 0) 
     {
         if (S_ISREG(file_info.st_mode)) 
         {
-            return 1; // esiste, regular
+            result= 1; // esiste, regular
         } 
         else 
         {
             printf("%s non e' regular",target);
-            return 0; // esiste, not regular
         }
     } 
     else 
     {
         printf("%s non esiste",target);
-        return 0; // non esiste;
     }
+    return result;
 
 }
 
