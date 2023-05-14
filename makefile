@@ -4,7 +4,7 @@ collector: collector.c
 	gcc -Wall -Werror -o collector collector.c -g -lpthread
 
 masterThread: masterThread.c workerThread.o senderThread.o common.o
-	gcc -Wall -Werror -o farm masterThread.c common.o workerThread.o senderThread.o -g -lpthread
+	gcc -Wall -Werror -o farm masterThread.c common.o workerThread.o senderThread.o -g -lpthread -lglob
 
 workerThread.o: workerThread.c
 	gcc -Wall -Werror -c workerThread.c -g -lpthread

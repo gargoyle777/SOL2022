@@ -12,6 +12,8 @@
 #include "senderThread.h"
 #include <sys/wait.h>
 #include "common.h"
+#include <fnmatch.h>
+#include <glob.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
@@ -116,43 +118,102 @@ static void insertElementQueue(char* target, int queueUpperLimit)
     printf("master ha lasciato il lock\n");
 }
 
-//DOESNT SAVE THE DIGGING, JUST SAVING DIRECTORY BY THE NAME WITHOUT PATH
-void directoryDigger(char* path, char*** fileList, int* fileListSize)     //recursive approach TODO: gestione errore troppo particolareggiata
+
+void directoryDigger(char* path, char*** fileList, int* sizeFileList)
 {
-    DIR* openedDir;
-    struct dirent* freshDir;
-    char tmpString[256];
-
-    printf("scavo in una directory\n"); //testing
-
+    DIR* directory;
+    struct dirent* entry;
     errno = 0;
-    ec_null(openedDir = opendir(path),path);
+    char newPath[MAX_PATH_LENGTH];
+    ec_null(directory = opendir(path), strerror(errno));
 
-    while ((freshDir=readdir(openedDir)) != NULL) //TODO SUCCEDE BORDELLO CON IL PATH
+    while ((entry=readdir(directory)) != NULL) 
     {
-        memset(tmpString,0,256);
-        memcpy(tmpString,path,strlen(path));
-        memcpy(&(tmpString[strlen(path)]),freshDir->d_name,strlen(freshDir->d_name));
-        printf("ecco il path <%s>\n", tmpString);
-
-        if(freshDir->d_type == DT_DIR)  //it's a directory
+        if(entry->d_type == DT_DIR)
         {
-            tmpString[strlen(tmpString)] = '/';
-            directoryDigger(tmpString,fileList,fileListSize);            
+            strncpy(newPath,path,MAX_PATH_LENGTH);
+            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
+            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(MAX_PATH_LENGTH - strnlen(path,MAX_PATH_LENGTH -1) ))
+            printf("digging deeper: %s\n",newPath);
+            directoryDigger(fileList, newPath, sizeFileList);
         }
-        else if(freshDir->d_type == DT_REG)
+        else
         {
-            (* fileListSize) ++;
-            checked_realloc( fileList,(* fileListSize), sizeof(char*));
-            *fileList[(* fileListSize) - 1] = malloc(strlen(tmpString));
-            ec_null(*fileList[(* fileListSize) - 1],"malloc fallita, elemento di fileList non allocato");
-            strcpy(*fileList[(* fileListSize) - 1], tmpString); 
-            printf("ho collezionato %s\n",*fileList[(* fileListSize) - 1]); //testing
+            checkAndAdd(fileList, entry->d_name, sizeFileList);
         }
-        errno=0;
     }
-    if(errno!=0)    ec_null(freshDir,"something went wrong with readdir()");
-    ec_meno1(closedir(openedDir),"failure on close dir");
+    errno=0;
+    ec_meno1(closedir(directory),strerror(errno));
+}
+
+static int startCollectorProcess()
+{
+    char *collectorPath="./collector";
+    char *collectorArgs[]={collectorPath,NULL};
+    int pid;
+    pid= fork();
+    ec_meno1(pid,(strerror(errno)));
+    if(pid==0)  //figlio
+    {
+        execv(collectorPath,collectorArgs);
+    }
+    return pid;
+}
+
+static void addFileToList(char*** fileList, char* target, int* sizeFileList )
+{
+    checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
+    fileList[sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
+    ec_null(fileList[sizeFileList] ,"malloc fallita, stringa di elemento di fileList non allocato");
+    strncpy( fileList[sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
+    printf("master ha digerito: %s \n",fileList[sizeFileList]); //testing
+    (*sizeFileList) ++;
+}
+
+static int containsWildcard(char* target)
+{
+    size_t len = strnlen(target,UNIX_PATH_MAX);
+    size_t i=0;
+    for( i=0;i<len;i++)
+    {
+        if(target[i] == '*' || target[i]=='?') return 1;
+    }
+    return 0;
+}
+
+static int checkFile(char* target)
+{
+    struct stat fileInfo;
+    if (stat(target, &file_info) == 0) 
+    {
+        if (S_ISREG(file_info.st_mode)) 
+        {
+            return 1; // esiste, regular
+        } 
+        else 
+        {
+            printf("%s non e' regular",target);
+            return 0; // esiste, not regular
+        }
+    } 
+    else 
+    {
+        printf("%s non esiste",target);
+        return 0; // non esiste;
+    }
+
+}
+
+static void checkAndAdd(char*** fileList, char* target, int* sizeFileList)
+{
+    if(checkFile(target))
+    {
+        addFileToList(fileList, target, sizeFileList);     
+    }
+    else
+    {
+        //nothing to do
+    }
 }
 
 int main(int argc, char* argv[])
@@ -172,19 +233,18 @@ int main(int argc, char* argv[])
     pthread_t senderThread;
     pthread_t *tSlaves;
     
-
+    glob_t globResult;
     int i;  //counter
     int opt;
     char **fileList;
     int sizeFileList = 0;
-    char **dirList;
-    int sizeDirList = 0;
-    int ac; //counts how many argument i have checked
     int nthread = 4;       //default is 4
     int qlen = 8;       //default is 8
     int dirFlag = 0;        //check for directory
     int delay = 0;        //default is 0
     char* inputtedDirectory; //default is non present
+    int pid;
+    char* tmpTarget;
 
     //start signal masking
     ec_meno1(sigfillset(&set),(strerror(errno)));
@@ -236,39 +296,36 @@ int main(int argc, char* argv[])
     }
 
     while (optind < argc) {
-
-        sizeFileList ++;
-        checked_realloc(&fileList, sizeFileList, sizeof(char*));
-        fileList[sizeFileList - 1] = malloc(strnlen(argv[optind],MAX_PATH_LENGTH)+1);
-        ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
-        strncpy( fileList[sizeFileList-1], argv[ac], strnlen(argv[optind], MAX_PATH_LENGTH) +1 );
-        printf("master ha digerito: %s \n",fileList[sizeFileList - 1]); //testing
-        optind++;
+        tmpTarget = argv[optind];
+        if((containsWildcard(tmpTarget)) == 0)
+        { //no wildcard
+            checkAndAdd(&fileList,tmpTarget,&sizeFileList);
+        }
+        else //wildcards are present
+        {
+            ec_null(glob(tmpTarget,0,NULL,&globResult),strerror(errno));
+            for (i=0; i < glob_result.gl_pathc; i++)
+            {
+                checkAndAdd(&fileList,glob_result.gl_pathv[i],&sizeFileList);
+            }
+            globfree(&globResult);
+        }
+        optind++;  
     }
+
+    //START directory exploration
+
+    printf("sto per iniziare a scavare");
+    directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
+    
+    
+    //END of directory exploration
 
     //END parsing
 
     //START collector process
-    char *collectorPath="./collector";
-    char *collectorArgs[]={collectorPath,NULL};
-    int pid;
-    pid= fork();
-    ec_meno1(pid,(strerror(errno)));
-    if(pid==0)  //figlio
-    {
-        execv(collectorPath,collectorArgs);
-    }
+    pid = startCollectorProcess();
     //END of collector process
-
-    //START directory exploration
-
-    for(i=0; i<sizeDirList; i++)
-    {
-    	printf("sto per iniziare a scavare");
-        directoryDigger(dirList[i], &fileList, &sizeFileList);
-    }
-    
-    //END of directory exploration
 
     //START of threading
     tSlaves = malloc(nthread * sizeof(pthread_t));
@@ -324,16 +381,6 @@ int main(int argc, char* argv[])
     int checkk=0;
 
     //clean dei vecchi valori
-    for(i=0; i<sizeDirList; i++)
-    {
-        printf("faccio il free di %s\n",dirList[i]);
-        free(dirList[i]);
-    }
-    
-    if(sizeDirList>0){
-        printf("faccio il free di dir list\n");
-        free(dirList);
-    }   
     
     if(dirFlag == 1) free (inputtedDirectory);
     
