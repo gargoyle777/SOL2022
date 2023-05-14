@@ -251,7 +251,6 @@ int main(int argc, char* argv[])
     pthread_t senderThread;
     pthread_t *tSlaves;
     
-    glob_t globResult;
     int i;  //counter
     int opt;
     char **fileList;
@@ -297,12 +296,12 @@ int main(int argc, char* argv[])
             case 'q':   //concurrent queue's length
                 qlen = atoi(optarg);
                 break;
-            case 't':
+            case 'd':
                 dirFlag = 1;  
                 inputtedDirectory = malloc(strnlen(optarg,MAX_PATH_LENGTH)+1);
                 strncpy(inputtedDirectory,optarg,MAX_PATH_LENGTH);
                 break;
-            case 'd': //delay
+            case 't': //delay
                 delay = atoi(optarg);
                 break; 
             case '?': //invalid option
@@ -329,9 +328,12 @@ int main(int argc, char* argv[])
 
     //START directory exploration
 
-    printf("sto per iniziare a scavare");
-    directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
     
+    if(dirFlag == 1) 
+    {
+        printf("sto per iniziare a scavare");
+        directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
+    }
     
     //END of directory exploration
 
@@ -396,7 +398,7 @@ int main(int argc, char* argv[])
 
     //clean dei vecchi valori
     
-    if(dirFlag == 1) free (inputtedDirectory);
+    if(dirFlag == 1) free(inputtedDirectory);
     
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
