@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include "common.h"
 #include <fnmatch.h>
-#include <glob.h>
+#include <fnmatch.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
@@ -216,6 +216,23 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     ec_meno1(closedir(directory),strerror(errno));
 }
 
+static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
+{
+    DIR* directory = opendir(".");
+    errno=0;
+    ec_null(directory,strerror(errno));
+    struct dirent* entry;
+
+    while ((entry = readdir(directory)) != NULL) 
+    {
+        if (fnmatch(tmpTarget, entry->d_name, 0) == 0) 
+        {
+            checkAndAdd(fileList, entry->d_name, sizeFileList);
+        }
+    }
+
+    closedir(directory);
+}
 
 int main(int argc, char* argv[])
 {
@@ -304,12 +321,8 @@ int main(int argc, char* argv[])
         }
         else //wildcards are present
         {
-            ec_zero(glob(tmpTarget,0,NULL,&globResult),strerror(errno));
-            for (i=0; i < globResult.gl_pathc; i++)
-            {
-                checkAndAdd(&fileList,globResult.gl_pathv[i],&sizeFileList);
-            }
-            globfree(&globResult);
+            addIfMatching(&fileList,tmpTarget,&sizeFileList);
+
         }
         optind++;  
     }
