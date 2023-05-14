@@ -202,11 +202,11 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     {
         if(entry->d_type == DT_DIR)
         {
-            strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
-            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
-            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
-            printf("digging deeper: %s\n",newPath);
-            directoryDigger(newPath, fileList, sizeFileList);
+            //strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
+            //newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
+            //strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
+            printf("digging deeper: %s\n",entry->d_name);
+            directoryDigger(entry->d_name, fileList, sizeFileList);
         }
         else
         {
