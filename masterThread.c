@@ -135,6 +135,7 @@ static int startCollectorProcess()
 
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
+    printf("master vuole aggiungere %s\n",target);
     checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
     (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
     ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
@@ -298,8 +299,9 @@ int main(int argc, char* argv[])
                 break;
             case 'd':
                 dirFlag = 1;  
+                printf("directory individuata: %s\n",optarg);
                 inputtedDirectory = malloc(strnlen(optarg,MAX_PATH_LENGTH)+1);
-                strncpy(inputtedDirectory,optarg,MAX_PATH_LENGTH);
+                strncpy(inputtedDirectory,optarg,MAX_PATH_LENGTH+1);
                 break;
             case 't': //delay
                 delay = atoi(optarg);
