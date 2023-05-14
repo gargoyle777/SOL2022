@@ -14,7 +14,7 @@
 #include "common.h"
 
 #define ec_meno1(s,m) \
-    if((s) == -1) { perror("master"); exit(EXIT_FAILURE); }    
+    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
 #define ec_null(s,m) \
     if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
@@ -228,6 +228,10 @@ int main(int argc, char* argv[])
                 delay = atoi(optarg);
                 break; 
             case '?': //invalid option
+                printf("invalid option\n");
+                break;
+            default:
+                printf("shouldn't end up here\n");
         }
     }
 
@@ -336,7 +340,7 @@ int main(int argc, char* argv[])
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     errno=0;
-    ec_zero(unlink(SOCKNAME),errno); //clean the socket file 
+    ec_zero(unlink(SOCKNAME),strerror(errno)); //clean the socket file 
     printf("master ha aspettato il collector\n---master chiude---\n");
     return 0;
 }

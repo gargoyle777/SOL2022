@@ -13,9 +13,9 @@
     if((s) == -1) { perror(m); exit(EXIT_FAILURE);}    
 
 #define ec_null(s,m) \
-    if((s) == NULL) { perror("collector ec_null"); exit(EXIT_FAILURE); }
+    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
 #define ec_zero(s,m) \
-    if((s) != 0) { perror("collector ec_zero"); exit(EXIT_FAILURE); }
+    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
 #define SOCKNAME "./farm.sck"
 #define BUFFERSIZE 265
