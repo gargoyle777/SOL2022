@@ -135,7 +135,7 @@ static int startCollectorProcess()
 
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
-    checked_realloc(*fileList, (*sizeFileList) + 1, sizeof(char*));
+    checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
     (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
     ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
     strncpy( (*fileList)[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
@@ -160,7 +160,7 @@ static int checkFile(char* target)
     int result = 0;
     if (stat(target, &fileInfo) == 0) 
     {
-        if (S_ISREG(file_info.st_mode)) 
+        if (S_ISREG(fileInfo.st_mode)) 
         {
             result= 1; // esiste, regular
         } 
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
         else //wildcards are present
         {
             ec_zero(glob(tmpTarget,0,NULL,&globResult),strerror(errno));
-            for (i=0; i < glob_result.gl_pathc; i++)
+            for (i=0; i < globResult.gl_pathc; i++)
             {
                 checkAndAdd(&fileList,globResult.gl_pathv[i],&sizeFileList);
             }
