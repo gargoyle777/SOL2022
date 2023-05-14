@@ -202,9 +202,9 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     {
         if(entry->d_type == DT_DIR)
         {
-            strncpy(newPath,path,MAX_PATH_LENGTH);
+            strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
             newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
-            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(MAX_PATH_LENGTH - strnlen(path,MAX_PATH_LENGTH -1) ));
+            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
             printf("digging deeper: %s\n",newPath);
             directoryDigger(newPath, fileList, sizeFileList);
         }
@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
                 dirFlag = 1;  
                 printf("directory individuata: %s\n",optarg);
                 inputtedDirectory = malloc(strnlen(optarg,MAX_PATH_LENGTH)+1);
-                strncpy(inputtedDirectory,optarg,MAX_PATH_LENGTH+1);
+                strncpy(inputtedDirectory,optarg,strnlen(optarg,MAX_PATH_LENGTH)+1);
                 break;
             case 't': //delay
                 delay = atoi(optarg);
