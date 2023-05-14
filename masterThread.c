@@ -11,6 +11,7 @@
 #include "workerThread.h"
 #include "senderThread.h"
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include "common.h"
 #include <fnmatch.h>
 #include <glob.h>
@@ -118,34 +119,6 @@ static void insertElementQueue(char* target, int queueUpperLimit)
     printf("master ha lasciato il lock\n");
 }
 
-
-void directoryDigger(char* path, char*** fileList, int* sizeFileList)
-{
-    DIR* directory;
-    struct dirent* entry;
-    errno = 0;
-    char newPath[MAX_PATH_LENGTH];
-    ec_null(directory = opendir(path), strerror(errno));
-
-    while ((entry=readdir(directory)) != NULL) 
-    {
-        if(entry->d_type == DT_DIR)
-        {
-            strncpy(newPath,path,MAX_PATH_LENGTH);
-            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
-            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(MAX_PATH_LENGTH - strnlen(path,MAX_PATH_LENGTH -1) ))
-            printf("digging deeper: %s\n",newPath);
-            directoryDigger(fileList, newPath, sizeFileList);
-        }
-        else
-        {
-            checkAndAdd(fileList, entry->d_name, sizeFileList);
-        }
-    }
-    errno=0;
-    ec_meno1(closedir(directory),strerror(errno));
-}
-
 static int startCollectorProcess()
 {
     char *collectorPath="./collector";
@@ -163,10 +136,10 @@ static int startCollectorProcess()
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
     checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
-    fileList[sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
-    ec_null(fileList[sizeFileList] ,"malloc fallita, stringa di elemento di fileList non allocato");
-    strncpy( fileList[sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
-    printf("master ha digerito: %s \n",fileList[sizeFileList]); //testing
+    fileList[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
+    ec_null(fileList[*sizeFileList] ,"malloc fallita, stringa di elemento di fileList non allocato");
+    strncpy( fileList[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
+    printf("master ha digerito: %s \n",fileList[*sizeFileList]); //testing
     (*sizeFileList) ++;
 }
 
@@ -215,6 +188,34 @@ static void checkAndAdd(char*** fileList, char* target, int* sizeFileList)
         //nothing to do
     }
 }
+
+void directoryDigger(char* path, char*** fileList, int* sizeFileList)
+{
+    DIR* directory;
+    struct dirent* entry;
+    errno = 0;
+    char newPath[MAX_PATH_LENGTH];
+    ec_null(directory = opendir(path), strerror(errno));
+
+    while ((entry=readdir(directory)) != NULL) 
+    {
+        if(entry->d_type == DT_DIR)
+        {
+            strncpy(newPath,path,MAX_PATH_LENGTH);
+            newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
+            strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(MAX_PATH_LENGTH - strnlen(path,MAX_PATH_LENGTH -1) ));
+            printf("digging deeper: %s\n",newPath);
+            directoryDigger(newPath, fileList, sizeFileList);
+        }
+        else
+        {
+            checkAndAdd(fileList, entry->d_name, sizeFileList);
+        }
+    }
+    errno=0;
+    ec_meno1(closedir(directory),strerror(errno));
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -303,10 +304,10 @@ int main(int argc, char* argv[])
         }
         else //wildcards are present
         {
-            ec_null(glob(tmpTarget,0,NULL,&globResult),strerror(errno));
+            ec_zero(glob(tmpTarget,0,NULL,&globResult),strerror(errno));
             for (i=0; i < glob_result.gl_pathc; i++)
             {
-                checkAndAdd(&fileList,glob_result.gl_pathv[i],&sizeFileList);
+                checkAndAdd(&fileList,globResult.gl_pathv[i],&sizeFileList);
             }
             globfree(&globResult);
         }
