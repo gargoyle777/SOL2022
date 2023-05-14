@@ -10,6 +10,7 @@
 #include <string.h>
 #include "senderThread.h"
 #include "common.h"
+#include <unistd.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    

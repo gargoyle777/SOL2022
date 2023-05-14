@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <string.h>
+#include <unistd.h>
 
 #define ec_meno1(s,m) \
     if((s) == -1) { perror(m); exit(EXIT_FAILURE);}    
@@ -163,7 +164,6 @@ int main(int argc, char* argv[])
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
     printf("collector prova a bindare\n");
-    //unlink(SOCKNAME); //clean the file
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     printf("collector prova il listen\n");
     ec_meno1(listen(fdSKT, 1),(strerror(errno))); 

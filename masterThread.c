@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <string.h>
 #include <signal.h>
@@ -207,7 +208,7 @@ int main(int argc, char* argv[])
 
 	printf("sto per parsare\n");//testing
 
-    /*new parse
+    //new parse
     while(( opt = getopt(argc, argv, "n:q:t:d:") ) !=-1)
     {
         switch(opt) 
@@ -231,62 +232,14 @@ int main(int argc, char* argv[])
     }
 
     while (optind < argc) {
-        printf("Argument: %s\n", argv[optind]);
+
+        sizeFileList ++;
+        checked_realloc(&fileList, sizeFileList, sizeof(char*));
+        fileList[sizeFileList - 1] = malloc(strnlen(argv[optind],MAX_PATH_LENGTH)+1);
+        ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
+        strncpy( fileList[sizeFileList-1], argv[ac], strnlen(argv[optind], MAX_PATH_LENGTH) +1 );
+        printf("master ha digerito: %s \n",fileList[sizeFileList - 1]); //testing
         optind++;
-    }
-*/
-    //START parsing 
-
-    for(ac = 1; ac<argc; ac++) //0 is filename          TODO:should check if file list is 0 only when -d is present
-    {
-        if( argv[ac][0] == '-')
-        {
-            switch ( argv[ac][1] )
-            {
-            case 'n':       //number of thread
-                ac++;
-                nthread = atoi(argv[ac]);
-                break;
-            case 'q':       //concurrent line's length
-                ac++;
-                qlen = atoi(argv[ac]);
-                break;
-            case 'd':       //directory name
-                dirFlag = 1;    
-                break;
-            case 't':       //delay (default is 0)
-                ac++;
-                delay = atoi(argv[ac]);
-                break;            
-            default:
-                break;
-            }
-        }
-        else
-        {   
-            if(dirFlag)
-            {
-                sizeDirList ++;
-                checked_realloc(&dirList,sizeDirList, sizeof(char*));
-                dirList[sizeDirList - 1] = calloc(strlen(argv[ac]) +1, sizeof(char));
-                ec_null(dirList[sizeDirList - 1] ,"calloc fallita, elemento di dirList non allocato");
-
-                strcpy(dirList[sizeDirList - 1], argv[ac]);
-
-            }
-            else
-            {
-            	printf("file trovato nell'argomento %d\n",ac); //testing
-                sizeFileList ++;
-
-                checked_realloc(&fileList, sizeFileList, sizeof(char*));
-                fileList[sizeFileList - 1] = malloc(strlen(argv[ac]) +1);
-                ec_null(fileList[sizeFileList - 1] ,"malloc fallita, elemento di fileList non allocato");
-
-                strcpy(fileList[sizeFileList-1],argv[ac]);
-                printf("master ha digerito: %s \n",fileList[sizeFileList - 1]); //testing
-            }
-        }
     }
 
     //END parsing
@@ -382,6 +335,8 @@ int main(int argc, char* argv[])
     
     waitpid(pid,&checkk,0);
     printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
+    errno=0;
+    ec_zero(unlink(SOCKNAME),errno); //clean the socket file 
     printf("master ha aspettato il collector\n---master chiude---\n");
     return 0;
 }
