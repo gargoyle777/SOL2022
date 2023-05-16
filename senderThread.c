@@ -122,6 +122,7 @@ static void safeExtract(sqElement** target)
     {
         printf("sender in attesa a causa di lista vuota\n");
         ec_zero(pthread_cond_wait(&sqEmpty,&sendermtx),"sender's cond wait on sqEmpty failed");
+        if(masterExitReq==2) pthread_exit();
     }
 
     printf("sender fuori dal loop di wait, si prepara all'estrazione");
