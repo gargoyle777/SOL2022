@@ -112,7 +112,7 @@ static void safeSend(int socketFD, sqElement element)
     safeACK(socketFD);
 }
 
-static void safeExtract(sqElement** target)
+static void safeExtract(sqElement** target, int fdSKT)
 {
 
     pthread_cleanup_push(lock_cleanup_handler, NULL); 
@@ -122,7 +122,7 @@ static void safeExtract(sqElement** target)
     {
         printf("sender in attesa a causa di lista vuota\n");
         ec_zero(pthread_cond_wait(&sqEmpty,&sendermtx),"sender's cond wait on sqEmpty failed");
-        if(masterExitReq==2) pthread_exit();
+        if(masterExitReq==2) pthread_exit(&fdSKT);
     }
 
     printf("sender fuori dal loop di wait, si prepara all'estrazione");
@@ -147,7 +147,7 @@ void* senderWorker(void* arg)
     while( flagWork == 1 )
     {
         printf("sender prova a estrarre il target\n");
-        safeExtract(&target);
+        safeExtract(&target,fdSKT);
 
         pthread_cleanup_push(target_cleanup_handler, &target); 
         
