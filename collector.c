@@ -9,17 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); exit(EXIT_FAILURE);}    
-
-#define ec_null(s,m) \
-    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
-#define ec_zero(s,m) \
-    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
-
-#define SOCKNAME "./farm.sck"
-#define BUFFERSIZE 265
-#define UNIX_PATH_MAX 108
 
 volatile sig_atomic_t flagEndReading= 0;
 
@@ -48,23 +37,6 @@ int compare( const void* a, const void* b)
 void sigusr2_handler(int signum)
 {
     flagEndReading= 1;
-}
-
-static void checked_realloc(res **ptr, int length, size_t size)
-{
-    errno=0;
-    if(length==1) 
-    {
-        //printf("provo malloc \n");
-        *ptr=malloc(length*size);
-    }
-    else 
-    {
-        //printf("provo realloc \n");
-        *ptr=realloc(*ptr, length*size);
-    }
-    ec_null(*ptr,"checked_realloc fallita");
-    //printf("riuscita\n");
 }
 
 static int sendACK(int fdC)

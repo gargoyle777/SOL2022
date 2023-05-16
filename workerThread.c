@@ -13,42 +13,6 @@
 #include "common.h"
 #include <unistd.h>
 
-#define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
-#define ec_null(s,m) \
-    if((s) == NULL) { perror(m); pthread_exit(&errorRetValue); }
-#define ec_zero(s,m) \
-    if((s) != 0) { perror(m); pthread_exit(&errorRetValue); }
-
-
-
-
-static void sender_lock_cleanup_handler(void* arg)
-{
-    ec_zero(pthread_mutex_unlock(&sendermtx),"worker's unlock failed during cleanup");
-}
-
-static void producer_lock_cleanup_handler(void* arg)
-{
-    ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed during cleanup");
-}
-
-static void requestlock_cleanup_handler(void* arg)
-{
-    ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed during cleanup");
-}
-
-
-static void target_cleanup_handler(void* arg)
-{
-    free((*(qElem**) arg)->filename);
-    free(*(qElem**) arg);
-}
-
-static void file_cleanup_handler(void *arg)
-{
-    ec_zero(fclose(*(FILE**)arg),(strerror(errno)));
-}
 
 static long fileCalc(char* fileAddress)
 {
@@ -76,7 +40,7 @@ static void safeDeposit(sqElement* target)
 {
     sqElement* tmp; 
     
-    pthread_cleanup_push(sender_lock_cleanup_handler,NULL);  //lock del sender
+    pthread_cleanup_push(senderlock_cleanup_handler,NULL);  //lock del sender
     ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
 
     //printf("worker ha il sender lock, cerca di depositare\n");
@@ -101,7 +65,7 @@ void* producerWorker(void* arg)
     //printf("worker avviato\n");
     int flagwork=1;
     sqElement *sqePointer;
-    qElem* target;
+    pqElement* target;
     int exitreqval = 0;
     
     while(flagwork==1)
@@ -112,13 +76,14 @@ void* producerWorker(void* arg)
         pthread_mutex_unlock(&requestmtx);
         pthread_cleanup_pop(0);
         sqePointer = NULL;
-        ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
-        pthread_cleanup_push(producer_lock_cleanup_handler,NULL);       //spingo cleanup per lock
 
-        while(queueSize==0 && exitreqval==0)
+        pthread_cleanup_push(producerlock_cleanup_handler,NULL);       //spingo cleanup per lock
+        ec_zero(pthread_mutex_lock(&producermtx),"worker's lock failed");     
+
+        while(pqSize==0 && exitreqval==0)
         {
         	//printf("worker in attesa a causa di lista vuota\n");
-            ec_zero(pthread_cond_wait(&queueEmpty,&mtx),"worker's cond wait on queueEmpty failed");
+            ec_zero(pthread_cond_wait(&pqEmpty,&producermtx),"worker's cond wait on pqEmpty failed");
             pthread_cleanup_push(requestlock_cleanup_handler, NULL);
             pthread_mutex_lock(&requestmtx);
             if(masterExitReq!=0) exitreqval = masterExitReq;
@@ -126,11 +91,11 @@ void* producerWorker(void* arg)
             pthread_cleanup_pop(0);
         }
         
-        //printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
+        //printf("worker fuori dal loop con wait, pqSize= %d e masterExitReq=%d\n",pqSize, masterExitReq);
 
-        if(queueSize==0)
+        if(pqSize==0)
         {
-        	//printf("worker esce, 0 elementi nella queuesize e masterexitreq settato a 1\n");
+        	//printf("worker esce, 0 elementi nella pqSize e masterexitreq settato a 1\n");
             pthread_exit(&retValue);
 	    }
 
@@ -140,7 +105,7 @@ void* producerWorker(void* arg)
            	pthread_exit(&retValue);
         }
 
-        if(exitreqval==1 && queueSize>0)
+        if(exitreqval==1 && pqSize>0)
         {
             //printf("worker fa un ultimo giro\n");
             flagwork=0;
@@ -149,10 +114,10 @@ void* producerWorker(void* arg)
         //printf("worker cerca di raccogliere l'elemento\n");
         target = queueHead;
         queueHead = queueHead->next;
-        queueSize--; 
-        ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed\n");
+        pqSize--; 
+        ec_zero(pthread_cond_signal(&pqFull),"worker's signal on pqFull failed\n");
         pthread_cleanup_pop(1); //tolgo per cleanup del lock
-        pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
+        pthread_cleanup_push(workstruct_cleanup_handler, &target);      //spingo clean up per target
         //printf("worker sta lavorando su %s\n",target->filename);
 
         sqePointer=malloc(sizeof(sqElement));

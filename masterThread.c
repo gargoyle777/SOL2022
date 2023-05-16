@@ -16,12 +16,6 @@
 #include <fnmatch.h>
 #include <fnmatch.h>
 
-#define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); exit(EXIT_FAILURE); }    
-#define ec_null(s,m) \
-    if((s) == NULL) { perror(m); exit(EXIT_FAILURE); }
-#define ec_zero(s,m) \
-    if((s) != 0) { perror(m); exit(EXIT_FAILURE); }
 
 volatile sig_atomic_t flagEndFetching= 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;
@@ -54,68 +48,51 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
-void checked_realloc(char ***ptr, int length, size_t size)
-{
-    errno=0;
-    if(length==1) 
-    {
-        //printf("provo malloc \n");
-        *ptr=malloc(length*size);
-    }
-    else 
-    {
-        //printf("provo realloc \n");
-        *ptr=realloc(*ptr, length*size);
-    }
-    ec_null(*ptr,"checked_realloc fallita");
-    //printf("riuscita\n");
-}
-
 static int insertElementQueue(char* target, int queueUpperLimit)
 {
     //printf("master si occupd di %s\n",target);
-    ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
-    while(queueSize>=queueUpperLimit)  //full queue
+    ec_zero(pthread_mutex_lock(&(producermtx)),"pthread_mutex_lock failed with producermtx");
+    while(pqSize>=queueUpperLimit)  //full queue
     {
-        ec_zero(pthread_cond_wait(&(queueFull),&mtx),"pthread_cond_wait failed on queueFull");
+        ec_zero(pthread_cond_wait(&(pqFull),&producermtx),"pthread_cond_wait failed on pqFull");
     }
     if(flagEndFetching == 1)     //setted
     {
         return 0; //TODO: CHECK this branch
     }
 
-    if(queueSize == 0)
+    if(pqSize == 0)
     {
         //printf("master inizia a mettere un elemento in testa\n");
-        queueHead = malloc(sizeof(qElem));
+        queueHead = malloc(sizeof(pqElement));
         ec_null(queueHead,"malloc of queueHead failed");
         queueHead->next = NULL;
         queueHead->filename = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
         memset(queueHead->filename,0,strnlen(target,MAX_PATH_LENGTH)+1);
         strncpy(queueHead->filename, target, strnlen(target,MAX_PATH_LENGTH)+1);  
-        queueSize = 1;
+        pqSize = 1;
         //printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
     }
     else
     {
-        qElem *tmpPointer = queueHead;
+        pqElement *tmpPointer = queueHead;
         while(tmpPointer->next != NULL)
         {
             tmpPointer = tmpPointer->next;
         }
-        tmpPointer->next = malloc(sizeof(qElem));
+        tmpPointer->next = malloc(sizeof(pqElement));
         ec_null(tmpPointer->next,"malloc of an element of the queue failed");
         tmpPointer = tmpPointer->next;
         tmpPointer->next = NULL;
         tmpPointer->filename = malloc( strnlen(target,MAX_PATH_LENGTH)+1);
         memset(tmpPointer->filename,0, strnlen(target,MAX_PATH_LENGTH)+1);
         strncpy(tmpPointer->filename, target,  strnlen(target,MAX_PATH_LENGTH)+1);  
-        queueSize++;
+        pqSize++;
     }
 
-    ec_zero(pthread_cond_signal(&queueEmpty),"pthread_cond_signal failed with queueEmpty");
+    ec_zero(pthread_cond_signal(&pqEmpty),"pthread_cond_signal failed with pqEmpty");
     //printf("master ha segnalato su queue not empty\n");
-    ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
+    ec_zero(pthread_mutex_unlock(&producermtx),"pthread_mutex_unlock failed with producermtx");
     //printf("master ha lasciato il lock\n");
     return 1;
 }
@@ -194,7 +171,7 @@ static void checkAndAdd(char*** fileList, char* target, int* sizeFileList)
     }
 }
 
-void directoryDigger(char* path, char*** fileList, int* sizeFileList)
+static void directoryDigger(char* path, char*** fileList, int* sizeFileList)
 {
     DIR* directory;
     struct dirent* entry;
@@ -256,10 +233,10 @@ int main(int argc, char* argv[])
     sigset_t set;
     struct sigaction sa;
 
-    queueSize = 0;
-    pthread_mutex_init(&mtx,NULL);
-    ec_zero(pthread_cond_init(&queueFull, NULL),"pthread_cond_init failed on condition queueFull");
-    ec_zero(pthread_cond_init(&queueEmpty, NULL),"pthread_cond_init failed on condition queueEmpty");
+    pqSize = 0;
+    pthread_mutex_init(&producermtx,NULL);
+    ec_zero(pthread_cond_init(&pqFull, NULL),"pthread_cond_init failed on condition pqFull");
+    ec_zero(pthread_cond_init(&pqEmpty, NULL),"pthread_cond_init failed on condition pqEmpty");
 
     pthread_t senderThread;
     pthread_t *tSlaves;
@@ -275,7 +252,7 @@ int main(int argc, char* argv[])
     char* inputtedDirectory; //default is non present
     int pid;
     char* tmpTarget;
-    qElem* tmpqh;
+    pqElement* tmpqh;
     sqElement* tmpsh;
     int senderSocket=0;
     int insertRetVal = 0;
@@ -390,7 +367,7 @@ int main(int argc, char* argv[])
         usleep(delay);
     }
    
-    ec_zero(pthread_mutex_lock(&requestmtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
+    ec_zero(pthread_mutex_lock(&requestmtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
 
     if(flagSIGUSR1 == 1)
     {
@@ -401,11 +378,11 @@ int main(int argc, char* argv[])
         masterExitReq = 1;
     }
     
-    ec_zero(pthread_mutex_unlock(&(requestmtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
+    ec_zero(pthread_mutex_unlock(&(requestmtx)),"pthread_mutex_unlock failed with producermtx, after checking flgSIGUSR1");
 
-    ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
-    ec_zero(pthread_cond_broadcast(&(queueEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
-    ec_zero(pthread_mutex_unlock(&(mtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
+    ec_zero(pthread_mutex_lock(&producermtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
+    ec_zero(pthread_cond_broadcast(&(pqEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
+    ec_zero(pthread_mutex_unlock(&(producermtx)),"pthread_mutex_unlock failed with producermtx, after checking flgSIGUSR1");
 
     for(i=0; i<nthread;i++)
     {

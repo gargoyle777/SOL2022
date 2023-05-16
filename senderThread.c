@@ -12,33 +12,6 @@
 #include "common.h"
 #include <unistd.h>
 
-#define ec_meno1(s,m) \
-    if((s) == -1) { perror(m); pthread_exit(&errorRetValue); }    
-#define ec_null(s,m) \
-    if((s) == NULL) { perror(m); pthread_exit(&errorRetValue); }
-#define ec_zero(s,m) \
-    if((s) != 0) { perror(m); pthread_exit(&errorRetValue); }
-
-static void senderlock_cleanup_handler(void* arg)
-{
-    ec_zero(pthread_mutex_unlock(&sendermtx),"sender's unlock failed during cleanup");
-}
-
-static void requestlock_cleanup_handler(void* arg)
-{
-    ec_zero(pthread_mutex_unlock(&requestmtx),"sender's unlock failed during cleanup");
-}
-
-static void target_cleanup_handler(void* arg)
-{
-    free((*(sqElement**) arg)->filename);
-    free(*(sqElement**)arg);
-}
-
-static void socket_cleanup_handler(void* arg)
-{
-    ec_meno1(close(*(int*) arg),strerror(errno));
-}
 
 static int safeConnect() //return the socket file descriptor
 {
@@ -164,7 +137,7 @@ void* senderWorker(void* arg)
         safeExtract(&target,fdSKT);
         //printf("sender ha estratto %s\n",target->filename);
 
-        pthread_cleanup_push(target_cleanup_handler, &target); 
+        pthread_cleanup_push(senderstruct_cleanup_handler, &target); 
         
         //printf("sender prova a mandare il target\n");
         safeSend(fdSKT,*target);
