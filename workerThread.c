@@ -92,6 +92,15 @@ void* producerWorker(void* arg)
         }
         
         //printf("worker fuori dal loop con wait, pqSize= %d e masterExitReq=%d\n",pqSize, masterExitReq);
+        if (pqSize != 0)
+        {
+            target = queueHead;
+            queueHead = queueHead->next;
+            pqSize--; 
+            ec_zero(pthread_cond_signal(&pqFull),"worker's signal on pqFull failed\n");
+        }
+
+        pthread_cleanup_pop(1); //tolgo per cleanup del lock
 
         if( (pqSize==0)
             || (exitreqval==2))
@@ -100,15 +109,8 @@ void* producerWorker(void* arg)
         }
         else
         {   
-            //printf("worker cerca di raccogliere l'elemento\n");
-            target = queueHead;
-            queueHead = queueHead->next;
-            pqSize--; 
-            ec_zero(pthread_cond_signal(&pqFull),"worker's signal on pqFull failed\n");
-            pthread_cleanup_pop(1); //tolgo per cleanup del lock
             pthread_cleanup_push(workstruct_cleanup_handler, &target);      //spingo clean up per target
             //printf("worker sta lavorando su %s\n",target->filename);
-
             sqePointer=malloc(sizeof(sqElement));
             ec_null(sqePointer,"worker failed to do a malloc");
             sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,MAX_PATH_LENGTH)+1));
@@ -123,6 +125,13 @@ void* producerWorker(void* arg)
             pthread_cleanup_pop(1); //tolgo per clean up del target con true
         }
     }
+
+    if(target != NULL)
+    {
+        free(target->filename);
+        free(target);
+    }
+    
     pthread_exit(NULL);
 }
 
