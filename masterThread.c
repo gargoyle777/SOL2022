@@ -1,5 +1,3 @@
-//TODO: check for error when accessing the array
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -13,9 +11,6 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include "common.h"
-#include <fnmatch.h>
-#include <fnmatch.h>
-
 
 volatile sig_atomic_t flagEndFetching= 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;

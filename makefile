@@ -1,4 +1,4 @@
-all: collector masterThread generafile test
+all: collector masterThread generafile enableTest
 
 collector: collector.c common.o
 	gcc -Wall -Werror -o collector collector.c common.o -g -lpthread
@@ -18,8 +18,14 @@ common.o: common.c
 generafile: generafile.c
 	gcc -Wall -Werror -o generafile generafile.c -std=c99
 
-test: test.sh
+.PHONY: enableTest
+enableTest: test.sh
 	chmod 701 test.sh
 
+.PHONY: test
+test: enableTest generafile collector masterThread
+	./test.sh
+
+.PHONY: clean
 clean:
-	rm collector masterThread workerThread.o
+	rm -f common.o workerThread.o senderThread.o farm collector
