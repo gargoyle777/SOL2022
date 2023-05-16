@@ -324,9 +324,7 @@ int main(int argc, char* argv[])
 
     while (optind < argc) {
         tmpTarget = argv[optind];
-        checkAndAdd(&fileList,tmpTarget,&sizeFileList);
 
-        /*  WILDCARDS ARE HANDLED BY GLOB
         if((containsWildcard(tmpTarget)) == 0)
         { //no wildcard
             checkAndAdd(&fileList,tmpTarget,&sizeFileList);
@@ -337,7 +335,6 @@ int main(int argc, char* argv[])
 
         }
         optind++;  
-        */
     }
 
     //START directory exploration
