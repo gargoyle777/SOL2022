@@ -117,7 +117,7 @@ static void printOutput(res *resultArray, int arraySize)
 {
     int i;
     qsort(resultArray,arraySize,sizeof(res),compare);
-    printf("collector ha ricevuto elementi in numero: %d\n",arraySize);
+    //printf("collector ha ricevuto elementi in numero: %d\n",arraySize);
 
     //printf("collector ha raccolto %d elementi\n",arraySize);
 

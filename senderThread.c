@@ -158,13 +158,13 @@ void* senderWorker(void* arg)
     {
         //printf("sender prova a estrarre il target\n");
         safeExtract(&target,fdSKT);
-        printf("sender ha estratto %s\n",target->filename);
+        //printf("sender ha estratto %s\n",target->filename);
 
         pthread_cleanup_push(target_cleanup_handler, &target); 
         
         //printf("sender prova a mandare il target\n");
         safeSend(fdSKT,*target);
-        printf("sender ha inviato %s\n",target->filename);
+        //printf("sender ha inviato %s\n",target->filename);
 
         pthread_cleanup_pop(1); // faccio il free dei valori
 
