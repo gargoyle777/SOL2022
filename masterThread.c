@@ -318,8 +318,6 @@ int main(int argc, char* argv[])
             case '?': //invalid option
                 //printf("invalid option\n");
                 break;
-            default:
-                //printf("shouldn't end up here\n");
         }
     }
 

@@ -113,7 +113,7 @@ static void freeResultsArray(res **resultArray, int arraySize)
     free(*resultArray);
 }
 
-static void produceOutput(res *resultArray, int arraySize)
+static void printOutput(res *resultArray, int arraySize)
 {
     int i;
     qsort(resultArray,arraySize,sizeof(res),compare);
@@ -122,7 +122,7 @@ static void produceOutput(res *resultArray, int arraySize)
 
     for(i=0;i<arraySize;i++)
     {
-        //printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
+        printf("%ld %s\n",resultArray[i].value,resultArray[i].name);
     }
 }
 
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
         if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
         {
             //printf("collector read fatal error,ecco output fin'ora\n");
-            produceOutput(resultArray,arraySize);
+            printOutput(resultArray,arraySize);
             freeResultsArray(&resultArray, arraySize);
             return 0;
             //TODO: handle error
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
  
     close(fdC);
     close(fdSKT);
-    produceOutput(resultArray,arraySize);
+    printOutput(resultArray,arraySize);
 
     freeResultsArray(&resultArray, arraySize);
 
