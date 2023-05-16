@@ -143,7 +143,7 @@ static void addFileToList(char*** fileList, char* target, int* sizeFileList )
     //printf("master ha digerito: %s \n",(*fileList)[*sizeFileList]); //testing
     (*sizeFileList) ++;
 }
-
+/*
 static int containsWildcard(char* target)
 {
     size_t len = strnlen(target,UNIX_PATH_MAX);
@@ -154,7 +154,7 @@ static int containsWildcard(char* target)
     }
     return 0;
 }
-
+*/
 static int checkFile(char* target)
 {
     struct stat fileInfo;
@@ -223,7 +223,7 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     errno=0;
     ec_meno1(closedir(directory),strerror(errno));
 }
-
+/*
 static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
 {
     DIR* directory = opendir(".");
@@ -241,7 +241,7 @@ static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
 
     closedir(directory);
 }
-
+*/
 int main(int argc, char* argv[])
 {
 	//printf("sto iniziando il main\n");//testing
