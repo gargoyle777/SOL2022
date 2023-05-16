@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include "common.h"
 
-
 volatile sig_atomic_t flagEndReading= 0;
 
 typedef struct supp
@@ -111,10 +110,8 @@ static void printOutput(res *resultArray, int arraySize)
     }
 }
 
-int main(int argc, char* argv[])
+static void signalHandling()
 {
-	//printf("collector avviato\n");//testing
-
     sigset_t blockset;
 
     // block all signals
@@ -126,7 +123,7 @@ int main(int argc, char* argv[])
     struct sigaction siga;
     siga.sa_handler = sigusr2_handler;
     errno=0;
-    ec_meno1(sigemptyset(&siga.sa_mask),"collector failed to call siemptyset\n");
+    ec_meno1(sigemptyset(&siga.sa_mask),"collector failed to call sigemptyset\n");
     siga.sa_flags = 0;
     errno=0;
     ec_meno1(sigaction(SIGUSR2, &siga, NULL),"collector failed to call sigaction\n");
@@ -134,7 +131,10 @@ int main(int argc, char* argv[])
     sigemptyset(&blockset);
     sigaddset(&blockset,SIGUSR2);
     sigprocmask(SIG_UNBLOCK,&blockset,NULL);
+}
 
+int main(int argc, char* argv[])
+{
     int fdSKT;
     int fdC; 
     struct sockaddr_un sa;
@@ -146,6 +146,9 @@ int main(int argc, char* argv[])
     char* fileName;
     long fileValue;
     int optionActive=1;
+
+    //printf("collector avviato\n");//testing
+    signalHandling();
 
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;

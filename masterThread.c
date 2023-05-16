@@ -129,18 +129,6 @@ static void addFileToList(char*** fileList, char* target, int* sizeFileList )
     (*sizeFileList) ++;
 }
 
-/*
-static int containsWildcard(char* target)
-{
-    size_t len = strnlen(target,UNIX_PATH_MAX);
-    size_t i=0;
-    for( i=0;i<len;i++)
-    {
-        if(target[i] == '*' || target[i]=='?') return 1;
-    }
-    return 0;
-}
-*/
 static int checkFile(char* target)
 {
     struct stat fileInfo;
@@ -213,69 +201,12 @@ static void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     errno=0;
     ec_meno1(closedir(directory),strerror(errno));
 }
-/*
-static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
+static void signalHandling()
 {
-    DIR* directory = opendir(".");
-    errno=0;
-    ec_null(directory,strerror(errno));
-    struct dirent* entry;
-
-    while ((entry = readdir(directory)) != NULL) 
-    {
-        if (fnmatch(tmpTarget, entry->d_name, 0) == 0) 
-        {
-            checkAndAdd(fileList, entry->d_name, sizeFileList);
-        }
-    }
-
-    closedir(directory);
-}
-*/
-
-int main(int argc, char* argv[])
-{
-	//printf("sto iniziando il main\n");//testing
-
-    //ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
     //for masking
     sigset_t set;
     struct sigaction sa;
 
-    ec_zero(pthread_mutex_init(&producermtx,NULL),"pthread_mutex_init failed");
-
-    ec_zero(pthread_mutex_init(&sendermtx,NULL),"pthread_mutex_init failed");
-
-    ec_zero(pthread_mutex_init(&requestmtx,NULL),"pthread_mutex_init failed");
-
-    ec_zero(pthread_cond_init(&pqFull, NULL),"pthread_cond_init failed on condition pqFull");
-
-    ec_zero(pthread_cond_init(&pqEmpty, NULL),"pthread_cond_init failed on condition pqEmpty");
-
-    ec_zero(pthread_cond_init(&sqEmpty,NULL),"pthread_cond_init failed");
-
-
-
-    pthread_t senderThread;
-    pthread_t *tSlaves;
-    
-    int i;  //counter
-    int opt;
-    char **fileList;
-    int sizeFileList = 0;
-    int nthread = 4;       //default is 4
-    int qlen = 8;       //default is 8
-    int dirFlag = 0;        //check for directory
-    int delay = 0;        //default is 0
-    char* inputtedDirectory; //default is non present
-    int pid;
-    char* tmpTarget;
-    pqElement* tmpqh;
-    sqElement* tmpsh;
-    int senderSocket=0;
-    int insertRetVal = 0;
-
-    //start signal masking
     errno=0;
     ec_meno1(sigfillset(&set),(strerror(errno)));
     errno=0;
@@ -301,11 +232,36 @@ int main(int argc, char* argv[])
     ec_meno1(sigemptyset(&set),(strerror(errno)));
     errno=0;
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
-    //END signal handling
+
+}
+
+int main(int argc, char* argv[])
+{
+    pthread_t senderThread;     // sender thread
+    pthread_t *tSlaves;         //array of worker threads
+    int i;                      //counter
+    int opt;                    //holds the option returned from getopt
+    char **fileList;            //lists of file names
+    int sizeFileList = 0;       //dim of fileList
+    int nthread = 4;            //number of worker threads, default is 4
+    int qlen = 8;               //size of queue between master and workers, default is 8
+    int dirFlag = 0;            //flag signaling -d option
+    int delay = 0;              //delay value, default is 0
+    char* inputtedDirectory;    //default is non present
+    int pid;                    //pid of collector process
+    char* tmpTarget;            //tmp value holding string
+    pqElement* tmpqh;           //tmp value holding pqhelement
+    sqElement* tmpsh;           //tmp value holding sqelement
+    int senderSocket=0;         //sender socket, used to secure the closing of the socket
+    int insertRetVal = 0;       //return value of insert function
+    int collectorRetVal=0;      //return value from collector
+
+    //printf("sto iniziando il main\n");//testing
+    signalHandling();
 
 	//printf("sto per parsare\n");//testing
 
-    //new parse
+    //new parser
     while(( opt = getopt(argc, argv, "n:q:t:d:") ) !=-1)
     {
         switch(opt) 
@@ -331,39 +287,37 @@ int main(int argc, char* argv[])
         }
     }
 
+    //file names
     while (optind < argc)
     {
         tmpTarget = argv[optind];
         checkAndAdd(&fileList,tmpTarget,&sizeFileList);
-        optind++;  
-    /*
-        if((containsWildcard(tmpTarget)) == 0)
-        { //no wildcard
-            checkAndAdd(&fileList,tmpTarget,&sizeFileList);
-        }
-        else //wildcards are present
-        {
-            addIfMatching(&fileList,tmpTarget,&sizeFileList);
-
-        }
-        optind++;  
-    */
-        
+        optind++;          
     }
 
-    //START directory exploration
-
-    
+    //START directory exploration   
     if(dirFlag == 1) 
     {
         //printf("sto per iniziare a scavare\n");
         directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
-    }
-    
+    } 
     //END of directory exploration
 
-    //END parsing
     //printf("numero file per master: %d\n",sizeFileList);
+
+    //mtx initializations
+    ec_zero(pthread_mutex_init(&producermtx,NULL),"pthread_mutex_init failed");
+
+    ec_zero(pthread_mutex_init(&sendermtx,NULL),"pthread_mutex_init failed");
+
+    ec_zero(pthread_mutex_init(&requestmtx,NULL),"pthread_mutex_init failed");
+
+    ec_zero(pthread_cond_init(&pqFull, NULL),"pthread_cond_init failed");
+
+    ec_zero(pthread_cond_init(&pqEmpty, NULL),"pthread_cond_init failed");
+
+    ec_zero(pthread_cond_init(&sqEmpty,NULL),"pthread_cond_init failed");
+
     //START collector process
     pid = startCollectorProcess();
     //END of collector process
@@ -378,7 +332,8 @@ int main(int argc, char* argv[])
     }
 
     ec_zero(pthread_create(&senderThread, NULL, &senderWorker, NULL), "pthread_create failure");
-    
+    //END of threading
+
     //START producing
 	//printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
     for(i=0;i<sizeFileList;i++)
@@ -393,7 +348,7 @@ int main(int argc, char* argv[])
         }
         usleep(delay);
     }
-   
+   //END producing
     ec_zero(pthread_mutex_lock(&requestmtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
 
     if(flagSIGUSR1 == 1)
@@ -426,6 +381,9 @@ int main(int argc, char* argv[])
     
 
     //printf("master ha finito di fare i join\n");
+
+    //START CLEANUP
+    //cleaning own strings
     for(i=0;i<sizeFileList;i++)
     {
         free(fileList[i]);
@@ -433,7 +391,7 @@ int main(int argc, char* argv[])
     free(fileList);
     free(tSlaves);
 
-    //master check for unfreed stacks
+    //master check for unfreed lists
     while(queueHead != NULL)
     {
         tmpqh=queueHead;
@@ -441,7 +399,6 @@ int main(int argc, char* argv[])
         free(tmpqh->filename);
         free(tmpqh);
     }
-
 
     while(sqHead != NULL)
     {
@@ -451,16 +408,13 @@ int main(int argc, char* argv[])
         free(tmpsh);
     }
 
-
     //printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
-    int checkk=0;
 
-    //clean dei vecchi valori
-    
+    //free eventuale directory
     if(dirFlag == 1) free(inputtedDirectory);
     
-    waitpid(pid,&checkk,0);
+    waitpid(pid,&collectorRetVal,0);
     //printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     errno=0;
     ec_zero(unlink(SOCKNAME),strerror(errno)); //clean the socket file 
