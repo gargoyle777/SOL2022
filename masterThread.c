@@ -358,7 +358,7 @@ int main(int argc, char* argv[])
     //END of directory exploration
 
     //END parsing
-    printf("numero file per master: %d",sizeFileList);
+    printf("numero file per master: %d\n",sizeFileList);
     //START collector process
     pid = startCollectorProcess();
     //END of collector process

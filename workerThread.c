@@ -133,7 +133,7 @@ void* producerWorker(void* arg)
         target = queueHead;
         queueHead = queueHead->next;
         queueSize--; 
-        ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed");
+        ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed\n");
         pthread_cleanup_pop(1); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
         //printf("worker sta lavorando su %s\n",target->filename);
@@ -147,7 +147,7 @@ void* producerWorker(void* arg)
         sqePointer->next = NULL;
 
         safeDeposit(sqePointer);
-        printf("worker ha depositato %s",sqePointer->filename);
+        printf("worker ha depositato %s\n",sqePointer->filename);
         //printf("worker ha finito di dare in pasto a sender");
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
