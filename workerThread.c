@@ -1,5 +1,3 @@
-//CHECK HOW FLAGWORK IS SET TO 0
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -63,12 +61,11 @@ static void safeDeposit(sqElement* target)
 void* producerWorker(void* arg)
 {
     //printf("worker avviato\n");
-    int flagwork=1;
     sqElement *sqePointer;
     pqElement* target;
     int exitreqval = 0;
     
-    while(flagwork==1)
+    while(1)
     {
         pthread_cleanup_push(requestlock_cleanup_handler, NULL);
         pthread_mutex_lock(&requestmtx);
@@ -105,12 +102,6 @@ void* producerWorker(void* arg)
            	pthread_exit(NULL);
         }
 
-        if(exitreqval==1 && pqSize>0)
-        {
-            //printf("worker fa un ultimo giro\n");
-            flagwork=0;
-        }
-
         //printf("worker cerca di raccogliere l'elemento\n");
         target = queueHead;
         queueHead = queueHead->next;
@@ -133,6 +124,7 @@ void* producerWorker(void* arg)
         //printf("worker ha finito di dare in pasto a sender");
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
+    //should not end up here, code here for defensive programming
     if(target != NULL)
     {
         free(target->filename);
