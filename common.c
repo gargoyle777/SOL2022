@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
 
 //sender extern
 sqElement *sqHead=NULL;
