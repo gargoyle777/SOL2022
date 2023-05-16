@@ -161,5 +161,5 @@ void* senderWorker(void* arg)
     //printf("sender chiude \n");
     pthread_cleanup_pop(0); //TODO: maybe closed to early? should be one lets keep it at 0 for testing
 
-    pthread_exit(&retValue);
+    pthread_exit(&fdSKT);
 }

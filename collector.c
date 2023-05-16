@@ -158,14 +158,14 @@ int main(int argc, char* argv[])
     int nameSize;
     char* fileName;
     long fileValue;
-    int optionActive =1;
+    int optionActive=1;
 
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
 
-    ec_meno1(setsockopt(fdSKT,SOL_SOCKET,SO_REUSEADDR,&optionActive,sizeof(optionActive)));
+    ec_meno1(setsockopt(fdSKT,SOL_SOCKET,SO_REUSEADDR,&optionActive,sizeof(optionActive)),strerror(errno));
     //printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
     //printf("collector prova il listen\n");

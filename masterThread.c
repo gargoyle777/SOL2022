@@ -272,6 +272,7 @@ int main(int argc, char* argv[])
     char* tmpTarget;
     qElem* tmpqh;
     sqElement* tmpsh;
+    int senderSocket=0;
 
     //start signal masking
     ec_meno1(sigfillset(&set),(strerror(errno)));
@@ -323,6 +324,9 @@ int main(int argc, char* argv[])
 
     while (optind < argc) {
         tmpTarget = argv[optind];
+        checkAndAdd(&fileList,tmpTarget,&sizeFileList);
+
+        /*  WILDCARDS ARE HANDLED BY GLOB
         if((containsWildcard(tmpTarget)) == 0)
         { //no wildcard
             checkAndAdd(&fileList,tmpTarget,&sizeFileList);
@@ -333,6 +337,7 @@ int main(int argc, char* argv[])
 
         }
         optind++;  
+        */
     }
 
     //START directory exploration
@@ -391,7 +396,8 @@ int main(int argc, char* argv[])
     }
 
     //printf("master inizia il join di sender\n");
-    ec_zero(pthread_join(senderThread, NULL),"pthread_join failed");
+    senderSocket=pthread_join(senderThread, NULL);
+    ec_zero(senderSocket,"pthread_join failed");
 
     //printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
@@ -436,6 +442,7 @@ int main(int argc, char* argv[])
     //printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     errno=0;
     ec_zero(unlink(SOCKNAME),strerror(errno)); //clean the socket file 
+    ec_meno1(close(senderSocket),strerror(errno));
     //printf("master ha aspettato il collector\n---master chiude---\n");
     return 0;
 }
