@@ -226,7 +226,7 @@ static void signalHandling()
     errno=0;
     ec_meno1(sigemptyset(&set),(strerror(errno)));
     errno=0;
-    ec_meno1(sigaddsett(&set,SIGPIPE),"failed to sigaddset");
+    ec_meno1(sigaddset(&set,SIGPIPE),"failed to sigaddset");
     errno=0;
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
 
