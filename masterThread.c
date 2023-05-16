@@ -144,6 +144,7 @@ static void addFileToList(char*** fileList, char* target, int* sizeFileList )
     (*sizeFileList) ++;
 }
 
+/*
 static int containsWildcard(char* target)
 {
     size_t len = strnlen(target,UNIX_PATH_MAX);
@@ -154,7 +155,7 @@ static int containsWildcard(char* target)
     }
     return 0;
 }
-
+*/
 static int checkFile(char* target)
 {
     struct stat fileInfo;
@@ -223,7 +224,7 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     errno=0;
     ec_meno1(closedir(directory),strerror(errno));
 }
-
+/*
 static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
 {
     DIR* directory = opendir(".");
@@ -241,6 +242,7 @@ static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
 
     closedir(directory);
 }
+*/
 
 int main(int argc, char* argv[])
 {
@@ -324,7 +326,8 @@ int main(int argc, char* argv[])
 
     while (optind < argc) {
         tmpTarget = argv[optind];
-
+        checkAndAdd(&fileList,tmpTarget,&sizeFileList);
+    /*
         if((containsWildcard(tmpTarget)) == 0)
         { //no wildcard
             checkAndAdd(&fileList,tmpTarget,&sizeFileList);
@@ -335,6 +338,7 @@ int main(int argc, char* argv[])
 
         }
         optind++;  
+    */
     }
 
     //START directory exploration
@@ -349,7 +353,7 @@ int main(int argc, char* argv[])
     //END of directory exploration
 
     //END parsing
-
+    printf("numero file per master: %d",sizeFileList);
     //START collector process
     pid = startCollectorProcess();
     //END of collector process
