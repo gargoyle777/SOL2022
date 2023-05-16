@@ -1,16 +1,16 @@
 all: collector masterThread generafile test
 
 collector: collector.c
-	gcc -Wall -Werror -o collector collector.c -g -lpthread
+	gcc -Wall -Werror -o collector collector.c -common.o -g -lpthread
 
 masterThread: masterThread.c workerThread.o senderThread.o common.o
 	gcc -Wall -Werror -o farm masterThread.c common.o workerThread.o senderThread.o -g -lpthread
 
 workerThread.o: workerThread.c
-	gcc -Wall -Werror -c workerThread.c -g -lpthread
+	gcc -Wall -Werror -c workerThread.c -common.o -g -lpthread
 
 senderThread.o: senderThread.c
-	gcc -Wall -Werror -c senderThread.c -g -lpthread
+	gcc -Wall -Werror -c senderThread.c -common.o -g -lpthread
 
 common.o: common.c
 	gcc -Wall -Werror -c common.c -g -lpthread
