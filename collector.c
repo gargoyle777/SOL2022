@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
     ec_meno1(fdC,"collector morto sull'accept");
 
     //printf("collector entra nel suo loop\n");
-    while(!flagEndReading)
+    while(flagEndReading == 0)
     {
         fileName= NULL;
         nameSize=0u;
