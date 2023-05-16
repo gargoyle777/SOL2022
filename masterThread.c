@@ -59,21 +59,21 @@ void checked_realloc(char ***ptr, int length, size_t size)
     errno=0;
     if(length==1) 
     {
-        printf("provo malloc \n");
+        //printf("provo malloc \n");
         *ptr=malloc(length*size);
     }
     else 
     {
-        printf("provo realloc \n");
+        //printf("provo realloc \n");
         *ptr=realloc(*ptr, length*size);
     }
     ec_null(*ptr,"checked_realloc fallita");
-    printf("riuscita\n");
+    //printf("riuscita\n");
 }
 
 static void insertElementQueue(char* target, int queueUpperLimit)
 {
-    printf("master si occupd di %s\n",target);
+    //printf("master si occupd di %s\n",target);
     ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
     while(queueSize>=queueUpperLimit)  //full queue
     {
@@ -86,7 +86,7 @@ static void insertElementQueue(char* target, int queueUpperLimit)
 
     if(queueSize == 0)
     {
-        printf("master inizia a mettere un elemento in testa\n");
+        //printf("master inizia a mettere un elemento in testa\n");
         queueHead = malloc(sizeof(qElem));
         ec_null(queueHead,"malloc of queueHead failed");
         queueHead->next = NULL;
@@ -94,7 +94,7 @@ static void insertElementQueue(char* target, int queueUpperLimit)
         memset(queueHead->filename,0,strnlen(target,MAX_PATH_LENGTH)+1);
         strncpy(queueHead->filename, target, strnlen(target,MAX_PATH_LENGTH)+1);  
         queueSize = 1;
-        printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
+        //printf("master ha messo un elemento in testa, %s\n",queueHead->filename);
     }
     else
     {
@@ -114,9 +114,9 @@ static void insertElementQueue(char* target, int queueUpperLimit)
     }
 
     ec_zero(pthread_cond_signal(&queueEmpty),"pthread_cond_signal failed with queueEmpty");
-    printf("master ha segnalato su queue not empty\n");
+    //printf("master ha segnalato su queue not empty\n");
     ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
-    printf("master ha lasciato il lock\n");
+    //printf("master ha lasciato il lock\n");
 }
 
 static int startCollectorProcess()
@@ -135,12 +135,12 @@ static int startCollectorProcess()
 
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
-    printf("master vuole aggiungere %s\n",target);
+    //printf("master vuole aggiungere %s\n",target);
     checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
     (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
     ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
     strncpy( (*fileList)[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
-    printf("master ha digerito: %s \n",(*fileList)[*sizeFileList]); //testing
+    //printf("master ha digerito: %s \n",(*fileList)[*sizeFileList]); //testing
     (*sizeFileList) ++;
 }
 
@@ -167,12 +167,12 @@ static int checkFile(char* target)
         } 
         else 
         {
-            printf("%s non e' regular",target);
+            //printf("%s non e' regular",target);
         }
     } 
     else 
     {
-        printf("%s non esiste",target);
+        //printf("%s non esiste",target);
     }
     return result;
 
@@ -207,7 +207,7 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
             strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
             newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';
             strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
-            printf("digging deeper: %s\n",newPath);
+            //printf("digging deeper: %s\n",newPath);
             directoryDigger(newPath, fileList, sizeFileList);
         }
         else
@@ -216,7 +216,7 @@ void directoryDigger(char* path, char*** fileList, int* sizeFileList)
             strncpy(newPath,path,strnlen(path,MAX_PATH_LENGTH+1));
             newPath[strnlen(path,MAX_PATH_LENGTH)] = '/';   //newpath as a tmp value here
             strncpy(&(newPath[strnlen(path,MAX_PATH_LENGTH) + 1]),entry->d_name,(strnlen(path,MAX_PATH_LENGTH)+1+strnlen(entry->d_name,MAX_PATH_LENGTH)+1));
-            printf("digging deeper: %s\n",newPath);
+            //printf("digging deeper: %s\n",newPath);
             checkAndAdd(fileList, newPath, sizeFileList);
         }
     }
@@ -244,7 +244,7 @@ static void addIfMatching(char*** fileList,char* tmpTarget,int* sizeFileList)
 
 int main(int argc, char* argv[])
 {
-	printf("sto iniziando il main\n");//testing
+	//printf("sto iniziando il main\n");//testing
 
     //ec_null(getcwd(baseDir,256),"couldn't retrieve current working directory");
     //for masking
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
     //END signal handling
 
-	printf("sto per parsare\n");//testing
+	//printf("sto per parsare\n");//testing
 
     //new parse
     while(( opt = getopt(argc, argv, "n:q:t:d:") ) !=-1)
@@ -309,7 +309,7 @@ int main(int argc, char* argv[])
                 break;
             case 'd':
                 dirFlag = 1;  
-                printf("directory individuata: %s\n",optarg);
+                //printf("directory individuata: %s\n",optarg);
                 inputtedDirectory = malloc(strnlen(optarg,MAX_PATH_LENGTH)+1);
                 strncpy(inputtedDirectory,optarg,strnlen(optarg,MAX_PATH_LENGTH)+1);
                 break;
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
                 delay = atoi(optarg);
                 break; 
             case '?': //invalid option
-                printf("invalid option\n");
+                //printf("invalid option\n");
                 break;
         }
     }
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
     
     if(dirFlag == 1) 
     {
-        printf("sto per iniziare a scavare\n");
+        //printf("sto per iniziare a scavare\n");
         directoryDigger(inputtedDirectory,&fileList,&sizeFileList);
     }
     
@@ -365,10 +365,10 @@ int main(int argc, char* argv[])
     ec_zero(pthread_create(&senderThread, NULL, &senderWorker, NULL), "pthread_create failure");
     
     //START producing
-	printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
+	//printf("master inizia a produrre,%d elementi in lista\n",sizeFileList);
     for(i=0;i<sizeFileList;i++)
     {
-        printf("master si occupa di %s\n",fileList[i]);
+        //printf("master si occupa di %s\n",fileList[i]);
         insertElementQueue(fileList[i],qlen);
         usleep(delay);
     }
@@ -388,15 +388,15 @@ int main(int argc, char* argv[])
 
     for(i=0; i<nthread;i++)
     {
-    	printf("master sta iniziando a fare il join del thread numero %d\n",i);
+    	//printf("master sta iniziando a fare il join del thread numero %d\n",i);
         ec_zero(pthread_join(tSlaves[i], NULL),"pthread_join failed");
     }
 
-    printf("master inizia il join di sender\n");
+    //printf("master inizia il join di sender\n");
     senderSocket=pthread_join(senderThread, NULL);
     ec_zero(senderSocket,"pthread_join failed");
 
-    printf("master ha finito di fare i join\n");
+    //printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
     {
         free(fileList[i]);
@@ -427,7 +427,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    printf("master manda il segnale di fermarsi a collector\n");
+    //printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
     int checkk=0;
 
@@ -436,10 +436,10 @@ int main(int argc, char* argv[])
     if(dirFlag == 1) free(inputtedDirectory);
     
     waitpid(pid,&checkk,0);
-    printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
+    //printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     errno=0;
     ec_zero(unlink(SOCKNAME),strerror(errno)); //clean the socket file 
     ec_meno1(close(senderSocket),strerror(errno));
-    printf("master ha aspettato il collector\n---master chiude---\n");
+    //printf("master ha aspettato il collector\n---master chiude---\n");
     return 0;
 }
