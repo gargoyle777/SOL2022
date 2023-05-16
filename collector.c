@@ -222,11 +222,10 @@ int main(int argc, char* argv[])
     }
 
     //printf("collector e' fuori dal suo loop\n");
- 
-    close(fdC);
-    close(fdSKT);
     printOutput(resultArray,arraySize);
 
+    close(fdC);
+    close(fdSKT);
     freeResultsArray(&resultArray, arraySize);
 
     //printf("---collector chiude---\n");

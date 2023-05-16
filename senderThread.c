@@ -24,6 +24,11 @@ static void lock_cleanup_handler(void* arg)
     ec_zero(pthread_mutex_unlock(&sendermtx),"sender's unlock failed during cleanup");
 }
 
+static void requestlock_cleanup_handler(void* arg)
+{
+    ec_zero(pthread_mutex_unlock(&requestmtx),"sender's unlock failed during cleanup");
+}
+
 static void target_cleanup_handler(void* arg)
 {
     free((*(sqElement**) arg)->filename);
@@ -114,7 +119,7 @@ static void safeSend(int socketFD, sqElement element)
 
 static void safeExtract(sqElement** target, int fdSKT)
 {
-
+    int exitreq=0;
     pthread_cleanup_push(lock_cleanup_handler, NULL); 
     ec_zero(pthread_mutex_lock(&sendermtx),"sender's lock failed");
 
@@ -122,7 +127,12 @@ static void safeExtract(sqElement** target, int fdSKT)
     {
         //printf("sender in attesa a causa di lista vuota\n");
         ec_zero(pthread_cond_wait(&sqEmpty,&sendermtx),"sender's cond wait on sqEmpty failed");
-        if(masterExitReq==2) pthread_exit(&fdSKT);
+        pthread_cleanup_push(requestlock_cleanup_handler, NULL);
+        pthread_mutex_lock(&requestmtx);
+        if(masterExitReq==2) exitreq=1;
+        pthread_mutex_unlock(&requestmtx);
+        pthread_cleanup_pop(0);
+        if(exitreq==1) pthread_exit(&fdSKT);
     }
 
     //printf("sender fuori dal loop di wait, si prepara all'estrazione");
@@ -158,7 +168,11 @@ void* senderWorker(void* arg)
 
         pthread_cleanup_pop(1); // faccio il free dei valori
 
+        pthread_cleanup_push(requestlock_cleanup_handler, NULL);
+        pthread_mutex_lock(&requestmtx);
         if(masterExitReq != 0 && sqSize == 0) flagWork =0;
+        pthread_mutex_unlock(&requestmtx);
+        pthread_cleanup_pop(0);
     }
 
     //printf("sender chiude \n");

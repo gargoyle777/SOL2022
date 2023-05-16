@@ -33,6 +33,12 @@ static void producer_lock_cleanup_handler(void* arg)
     ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed during cleanup");
 }
 
+static void requestlock_cleanup_handler(void* arg)
+{
+    ec_zero(pthread_mutex_unlock(&mtx),"worker's unlock failed during cleanup");
+}
+
+
 static void target_cleanup_handler(void* arg)
 {
     free((*(qElem**) arg)->filename);
@@ -96,17 +102,28 @@ void* producerWorker(void* arg)
     int flagwork=1;
     sqElement *sqePointer;
     qElem* target;
+    int exitreqval = 0;
     
     while(flagwork==1)
     {
+        pthread_cleanup_push(requestlock_cleanup_handler, NULL);
+        pthread_mutex_lock(&requestmtx);
+        if(masterExitReq!=0) exitreqval = masterExitReq;
+        pthread_mutex_unlock(&requestmtx);
+        pthread_cleanup_pop(0);
         sqePointer = NULL;
         ec_zero(pthread_mutex_lock(&mtx),"worker's lock failed");
         pthread_cleanup_push(producer_lock_cleanup_handler,NULL);       //spingo cleanup per lock
 
-        while(queueSize==0 && masterExitReq==0)
+        while(queueSize==0 && exitreqval==0)
         {
         	//printf("worker in attesa a causa di lista vuota\n");
             ec_zero(pthread_cond_wait(&queueEmpty,&mtx),"worker's cond wait on queueEmpty failed");
+            pthread_cleanup_push(requestlock_cleanup_handler, NULL);
+            pthread_mutex_lock(&requestmtx);
+            if(masterExitReq!=0) exitreqval = masterExitReq;
+            pthread_mutex_unlock(&requestmtx);
+            pthread_cleanup_pop(0);
         }
         
         //printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
@@ -117,13 +134,13 @@ void* producerWorker(void* arg)
             pthread_exit(&retValue);
 	    }
 
-        if(masterExitReq==2)
+        if(exitreqval==2)
         {
            	//printf("worker esce, masterexitreq settato a 2\n");
            	pthread_exit(&retValue);
         }
 
-        if(masterExitReq==1 && queueSize>0)
+        if(exitreqval==1 && queueSize>0)
         {
             //printf("worker fa un ultimo giro\n");
             flagwork=0;

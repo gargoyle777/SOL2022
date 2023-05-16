@@ -14,6 +14,8 @@ int queueSize=0;
 pthread_mutex_t mtx;
 pthread_cond_t queueFull;
 pthread_cond_t queueEmpty;
+
+pthread_cond_t requestmtx;
 int masterExitReq=0;
 
 //TODO REMOVE WHEN TESTEST 

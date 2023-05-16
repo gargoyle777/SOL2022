@@ -29,6 +29,8 @@ extern int queueSize;
 extern pthread_mutex_t mtx;
 extern pthread_cond_t queueFull;
 extern pthread_cond_t queueEmpty;
+
+extern pthread_mutex_t requestmtx;
 extern int masterExitReq;
 
 extern sqElement *sqHead;

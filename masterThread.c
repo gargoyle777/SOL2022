@@ -71,7 +71,7 @@ void checked_realloc(char ***ptr, int length, size_t size)
     //printf("riuscita\n");
 }
 
-static void insertElementQueue(char* target, int queueUpperLimit)
+static int insertElementQueue(char* target, int queueUpperLimit)
 {
     //printf("master si occupd di %s\n",target);
     ec_zero(pthread_mutex_lock(&(mtx)),"pthread_mutex_lock failed with mtx");
@@ -79,9 +79,9 @@ static void insertElementQueue(char* target, int queueUpperLimit)
     {
         ec_zero(pthread_cond_wait(&(queueFull),&mtx),"pthread_cond_wait failed on queueFull");
     }
-    if(flagEndFetching)     //setted
+    if(flagEndFetching == 1)     //setted
     {
-        return; //TODO: CHECK this branch
+        return 0; //TODO: CHECK this branch
     }
 
     if(queueSize == 0)
@@ -117,6 +117,7 @@ static void insertElementQueue(char* target, int queueUpperLimit)
     //printf("master ha segnalato su queue not empty\n");
     ec_zero(pthread_mutex_unlock(&mtx),"pthread_mutex_unlock failed with mtx");
     //printf("master ha lasciato il lock\n");
+    return 1;
 }
 
 static int startCollectorProcess()
@@ -277,6 +278,7 @@ int main(int argc, char* argv[])
     qElem* tmpqh;
     sqElement* tmpsh;
     int senderSocket=0;
+    int insertRetVal = 0;
 
     //start signal masking
     ec_meno1(sigfillset(&set),(strerror(errno)));
@@ -378,13 +380,19 @@ int main(int argc, char* argv[])
     for(i=0;i<sizeFileList;i++)
     {
         //printf("master si occupa di %s\n",fileList[i]);
-        insertElementQueue(fileList[i],qlen);
+        insertRetVal=insertElementQueue(fileList[i],qlen);
+        if(insertRetVal == 0)
+        {
+            //time to stop
+            i = sizeFileList;
+            delay = 0;
+        }
         usleep(delay);
     }
    
-    ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
+    ec_zero(pthread_mutex_lock(&requestmtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
 
-    if(flagSIGUSR1)
+    if(flagSIGUSR1 == 1)
     {
         masterExitReq = 2;
         kill(pid,SIGUSR2);
@@ -392,6 +400,10 @@ int main(int argc, char* argv[])
     else{
         masterExitReq = 1;
     }
+    
+    ec_zero(pthread_mutex_unlock(&(requestmtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
+
+    ec_zero(pthread_mutex_lock(&mtx),"pthread_mutex_lock failed with mtx, before checking flagSIGUSR1");
     ec_zero(pthread_cond_broadcast(&(queueEmpty)),"pthread_cond_broadcast failed");  //to let every thread to finish its cleaning
     ec_zero(pthread_mutex_unlock(&(mtx)),"pthread_mutex_unlock failed with mtx, after checking flgSIGUSR1");
 
@@ -418,27 +430,23 @@ int main(int argc, char* argv[])
     free(tSlaves);
 
     //master check for unfreed stacks
-    if(queueHead !=NULL)
+    while(queueHead != NULL)
     {
-        while(queueHead != NULL)
-        {
-            tmpqh=queueHead;
-            queueHead= queueHead->next;
-            free(tmpqh->filename);
-            free(tmpqh);
-        }
+        tmpqh=queueHead;
+        queueHead= queueHead->next;
+        free(tmpqh->filename);
+        free(tmpqh);
     }
 
-    if(sqHead != NULL)
+
+    while(sqHead != NULL)
     {
-        while(sqHead != NULL)
-        {
-            tmpsh=sqHead;
-            sqHead= sqHead->next;
-            free(tmpsh->filename);
-            free(tmpsh);
-        }
+        tmpsh=sqHead;
+        sqHead= sqHead->next;
+        free(tmpsh->filename);
+        free(tmpsh);
     }
+
 
     //printf("master manda il segnale di fermarsi a collector\n");
     kill(pid,SIGUSR2);
