@@ -34,13 +34,6 @@ static int safeConnect() //return the socket file descriptor
     {
         if(counter > 25) pthread_exit(&fdSKT);
         usleep(100);    //gives advantage to the server and slows down
-        pthread_cleanup_push(requestlock_cleanup_handler, NULL);
-        pthread_mutex_lock(&requestmtx);
-        requestval=masterExitReq;
-        pthread_mutex_unlock(&requestmtx);
-        pthread_cleanup_pop(0);
-        if(requestval == 2) pthread_exit(&fdSKT);
-
         errno=0;
         checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa));
         counter++;
