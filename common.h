@@ -53,13 +53,13 @@ extern pthread_mutex_t sendermtx;
 extern pthread_cond_t sqEmpty;
 
 //function prototypes
-void senderlock_cleanup_handler(void* arg)
-void producerlock_cleanup_handler(void* arg)
-void requestlock_cleanup_handler(void* arg)
-void workstruct_cleanup_handler(void* arg)
-void file_cleanup_handler(void *arg)
-void senderstruct_cleanup_handler(void* arg)
-void socket_cleanup_handler(void* arg)
-void checked_realloc(void ***ptr, int length, size_t size)
+void senderlock_cleanup_handler(void* arg);
+void producerlock_cleanup_handler(void* arg);
+void requestlock_cleanup_handler(void* arg);
+void workstruct_cleanup_handler(void* arg);
+void file_cleanup_handler(void *arg);
+void senderstruct_cleanup_handler(void* arg);
+void socket_cleanup_handler(void* arg);
+void checked_realloc(void **ptr, int length, size_t size);
 
 #endif

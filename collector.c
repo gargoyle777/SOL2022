@@ -8,6 +8,7 @@
 #include <sys/un.h>
 #include <string.h>
 #include <unistd.h>
+#include "common.h"
 
 
 volatile sig_atomic_t flagEndReading= 0;
@@ -16,7 +17,7 @@ typedef struct supp
 {
     long value;
     char *name;
-}   res;
+} res;
 
 int compare( const void* a, const void* b)
 {
@@ -197,7 +198,7 @@ int main(int argc, char* argv[])
         }
 
         arraySize++;
-        checked_realloc(&resultArray,arraySize, sizeof(res));     //realloc for result array
+        checked_realloc((void**) &resultArray,arraySize, sizeof(res));     //realloc for result array
 
         resultArray[arraySize-1].value=fileValue;
 

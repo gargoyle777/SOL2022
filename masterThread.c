@@ -114,7 +114,7 @@ static int startCollectorProcess()
 static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
     //printf("master vuole aggiungere %s\n",target);
-    checked_realloc(fileList, (*sizeFileList) + 1, sizeof(char*));
+    checked_realloc( (void**) fileList, (*sizeFileList) + 1, sizeof(char*));
     (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
     ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
     strncpy( (*fileList)[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );

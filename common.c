@@ -56,7 +56,7 @@ void socket_cleanup_handler(void* arg)
     ec_meno1(close(*(int*) arg),strerror(errno));
 }
 
-void checked_realloc(void ***ptr, int length, size_t size)
+void checked_realloc(void **ptr, int length, size_t size)
 {
     errno=0;
     if(length==1) 
