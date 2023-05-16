@@ -36,12 +36,7 @@ int compare( const void* a, const void* b)
 
 void sigusr2_handler(int signum)
 {
-    flagEndReading = 1;
-}
-
-void sigpipe_handler(int signum)
-{
-    flagEndReading = 1;
+    flagEndReading= 1;
 }
 
 static int sendACK(int fdC)
@@ -86,7 +81,7 @@ static int safeSocketRead(int fdC, void* buffer, int size)
         //printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
 
-    if( sendACK(fdC) == -1 ) return -2;
+    if( sendACK(fdC) == -1 ) return -1;
 
     return 0;
 }
@@ -132,14 +127,9 @@ static void signalHandling()
     siga.sa_flags = 0;
     errno=0;
     ec_meno1(sigaction(SIGUSR2, &siga, NULL),"collector failed to call sigaction\n");
-
-    siga.sa_handler = sigpipe_handler;
-    errno=0;
-    ec_meno1(sigaction(SIGPIPE, &siga, NULL),"collector failed to call sigaction\n");
-
+    
     sigemptyset(&blockset);
     sigaddset(&blockset,SIGUSR2);
-    sigaddset(&blockset,SIGPIPE);
     sigprocmask(SIG_UNBLOCK,&blockset,NULL);
 }
 
@@ -156,8 +146,6 @@ int main(int argc, char* argv[])
     char* fileName;
     long fileValue;
     int optionActive=1;
-
-    int retval=0;
 
     //printf("collector avviato\n");//testing
     signalHandling();
@@ -187,8 +175,7 @@ int main(int argc, char* argv[])
         nameSize=0u;
         fileValue = 0;
 
-        retval=safeSocketRead(fdC,&nameSize,sizeof(int));
-        if( retval < 0 )
+        if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
         {
             //printf("collector read fatal error,ecco output fin'ora\n");
             printOutput(resultArray,arraySize);
@@ -196,6 +183,7 @@ int main(int argc, char* argv[])
             close(fdC);
             close(fdSKT);
             return 0;
+            //TODO: handle error
         }
 
         errno=0;
@@ -203,26 +191,19 @@ int main(int argc, char* argv[])
         ec_null(fileName,"collector malloc failed for file name\n");
         memset(fileName,0,nameSize+1);
 
-        retval = safeSocketRead(fdC,fileName,nameSize);
-        if(  retval < 0 )
+        if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
-            printOutput(resultArray,arraySize);
-            freeResultsArray(&resultArray, arraySize);
-            close(fdC);
-            close(fdSKT);
+            //printf("collector read fatal error\n");
             return 0;
+            //TODO: handle error
         }
 
-        retval = safeSocketRead(fdC,&fileValue,8u);
-        if( retval == -1 )
+        if( safeSocketRead(fdC,&fileValue,8u) == -1)
         {
-            printOutput(resultArray,arraySize);
-            freeResultsArray(&resultArray, arraySize);
-            close(fdC);
-            close(fdSKT);
+            //printf("collector read fatal error\n");
             return 0;
+            //TODO: handle error
         }
-        if( retval == -2) flagEndReading=0;
 
         arraySize++;
         checked_realloc((void**) &resultArray,arraySize, sizeof(res));     //realloc for result array
@@ -236,9 +217,10 @@ int main(int argc, char* argv[])
 
     //printf("collector e' fuori dal suo loop\n");
     printOutput(resultArray,arraySize);
-    freeResultsArray(&resultArray, arraySize);
+
+    close(fdC);
     close(fdSKT);
-    close(fdC);    
+    freeResultsArray(&resultArray, arraySize);
 
     //printf("---collector chiude---\n");
     return 0;

@@ -16,9 +16,9 @@
 static int safeConnect() //return the socket file descriptor
 {
     int fdSKT; //file descriptor socket
+    int counter; //counts conncet() tries
     int checker; //check connect output
     struct sockaddr_un sa;
-    int counter;
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
 
@@ -27,15 +27,20 @@ static int safeConnect() //return the socket file descriptor
     errno=0;
     ec_meno1(fdSKT,(strerror(errno)));
     //printf("sender socket() ha funzionato\n");
-    checker=-1;
     counter=0;
-    while(checker==-1)
+    checker=0;
+    while(counter<5)
     {
-        if(counter > 25) pthread_exit(&fdSKT);
-        usleep(100);    //gives advantage to the server and slows down
         errno=0;
         checker=connect(fdSKT, (struct sockaddr*) &sa, sizeof(sa));
-        counter++;
+
+        if(checker==-1)
+        {
+            //printf("sender failed to connect: %d\n",counter);
+            sleep(1);
+            counter+=1;
+        }
+        else counter = 5;
     }
     errno=0;
     ec_meno1(checker,(strerror(errno)));

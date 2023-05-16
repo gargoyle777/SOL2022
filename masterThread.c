@@ -12,8 +12,9 @@
 #include <sys/stat.h>
 #include "common.h"
 
-volatile sig_atomic_t flagEndFetching = 0;
+volatile sig_atomic_t flagEndFetching= 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;
+
 
 //error handler function
 void handle_sighup(int sig)
@@ -203,30 +204,29 @@ static void signalHandling()
 
     errno=0;
     ec_meno1(sigfillset(&set),(strerror(errno)));
-    ec_zero(pthread_sigmask(SIG_SETMASK,&set,NULL),"failed pthread_sigmask"); 
+    errno=0;
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno))); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
     errno=0;
-    ec_meno1(sigaction(SIGHUP,&sa,NULL),("sigaction fail: SIGHUP"));
+    ec_meno1(sigaction(SIGHUP,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigint;
     errno=0;
-    ec_meno1(sigaction(SIGINT,&sa,NULL),("sigaction fail: SIGINT"));
+    ec_meno1(sigaction(SIGINT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigquit;
     errno=0;
-    ec_meno1(sigaction(SIGQUIT,&sa,NULL),("sigaction fail: SIGQUIT"));
+    ec_meno1(sigaction(SIGQUIT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigterm;
     errno=0;
-    ec_meno1(sigaction(SIGTERM,&sa,NULL),("sigaction fail: SIGTERM"));
+    ec_meno1(sigaction(SIGTERM,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigusr1;
     errno=0;
-    ec_meno1(sigaction(SIGUSR1,&sa,NULL),("sigaction fail: SIGUSR1"));
+    ec_meno1(sigaction(SIGUSR1,&sa,NULL),(strerror(errno)));
     errno=0;
     ec_meno1(sigemptyset(&set),(strerror(errno)));
     errno=0;
-    ec_meno1(sigaddset(&set,SIGPIPE),"sigaddset fail");
-    errno=0;
-    ec_zero(pthread_sigmask(SIG_SETMASK,&set,NULL),("failed pthread_sigmask"));
+    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
 
 }
 
@@ -354,6 +354,7 @@ int main(int argc, char* argv[])
     else{
         masterExitReq = 1;
     }
+    
     ec_zero(pthread_mutex_unlock(&(requestmtx)),"pthread_mutex_unlock failed with producermtx, after checking flgSIGUSR1");
 
     ec_zero(pthread_mutex_lock(&producermtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
