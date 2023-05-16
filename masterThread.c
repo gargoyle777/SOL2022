@@ -160,7 +160,9 @@ static int checkFile(char* target)
 {
     struct stat fileInfo;
     int result = 0;
-    if (stat(target, &fileInfo) == 0) 
+    int statRet= stat(target, &fileInfo);
+    ec_meno1(statRet,strerror(errno));
+    if (statRet == 0) 
     {
         if (S_ISREG(fileInfo.st_mode)) 
         {
@@ -324,9 +326,11 @@ int main(int argc, char* argv[])
         }
     }
 
-    while (optind < argc) {
+    while (optind < argc)
+    {
         tmpTarget = argv[optind];
         checkAndAdd(&fileList,tmpTarget,&sizeFileList);
+        optind++;  
     /*
         if((containsWildcard(tmpTarget)) == 0)
         { //no wildcard
@@ -339,6 +343,7 @@ int main(int argc, char* argv[])
         }
         optind++;  
     */
+        
     }
 
     //START directory exploration
