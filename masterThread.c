@@ -12,8 +12,9 @@
 #include <sys/stat.h>
 #include "common.h"
 
-volatile sig_atomic_t flagEndFetching= 0;
+volatile sig_atomic_t flagEndFetching = 0;
 volatile sig_atomic_t flagSIGUSR1 = 0;
+volatile sig_atomic_t flagSIGPIPE = 0;
 
 
 //error handler function
@@ -45,13 +46,14 @@ void handle_sigusr1(int sig)
 
 void handle_sigpipe(int signum)
 {
-    flagSIGUSR1 = 1;
+    flagSIGPIPE = 1;
 }
 
 static int insertElementQueue(char* target, int queueUpperLimit)
 {
     //printf("master si occupd di %s\n",target);
     errno=0;
+    if(flagSIGPIPE == 1) return 0;
     ec_zero(pthread_mutex_lock(&(producermtx)),"pthread_mutex_lock failed with producermtx");
     while(pqSize>=queueUpperLimit)  //full queue
     {
@@ -352,7 +354,7 @@ int main(int argc, char* argv[])
    //END producing
     ec_zero(pthread_mutex_lock(&requestmtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
 
-    if(flagSIGUSR1 == 1)
+    if(flagSIGUSR1 == 1 || flagSIGPIPE == 1)
     {
         masterExitReq = 2;
         kill(pid,SIGUSR2);
@@ -360,7 +362,6 @@ int main(int argc, char* argv[])
     else{
         masterExitReq = 1;
     }
-    
     ec_zero(pthread_mutex_unlock(&(requestmtx)),"pthread_mutex_unlock failed with producermtx, after checking flgSIGUSR1");
 
     ec_zero(pthread_mutex_lock(&producermtx),"pthread_mutex_lock failed with producermtx, before checking flagSIGUSR1");
