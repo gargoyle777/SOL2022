@@ -219,8 +219,9 @@ int main(int argc, char* argv[])
 
     printf("collector e' fuori dal suo loop\n");
  
-    //TODO: CLOSE ALL SOCKET
-
+    //TODO: CLOSE ALL SOCKETxubuntu
+    close(fdC);
+    close(fdSKT);
     produceOutput(resultArray,arraySize);
 
     freeResultsArray(&resultArray, arraySize);

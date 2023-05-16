@@ -108,7 +108,7 @@ static void safeSend(int socketFD, sqElement element)
     safeACK(socketFD);
     safeWrite(socketFD,element.filename,nameLength);
     safeACK(socketFD);
-    safeWrite(socketFD,&(element.val),sizeof(int));
+    safeWrite(socketFD,&(element.val),sizeof(long));
     safeACK(socketFD);
 }
 
