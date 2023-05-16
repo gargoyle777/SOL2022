@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 //sender extern
 sqElement *sqHead=NULL;

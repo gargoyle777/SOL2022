@@ -93,46 +93,36 @@ void* producerWorker(void* arg)
         
         //printf("worker fuori dal loop con wait, pqSize= %d e masterExitReq=%d\n",pqSize, masterExitReq);
 
-        if(pqSize==0)
+        if( (pqSize==0)
+            || (exitreqval==2))
         {
-        	//printf("worker esce, 0 elementi nella pqSize e masterexitreq settato a 1\n");
-            pthread_exit(&retValue);
-	    }
-
-        if(exitreqval==2)
-        {
-           	//printf("worker esce, masterexitreq settato a 2\n");
-           	pthread_exit(&retValue);
+           	flagwork=0;
         }
+        else
+        {   
+            //printf("worker cerca di raccogliere l'elemento\n");
+            target = queueHead;
+            queueHead = queueHead->next;
+            pqSize--; 
+            ec_zero(pthread_cond_signal(&pqFull),"worker's signal on pqFull failed\n");
+            pthread_cleanup_pop(1); //tolgo per cleanup del lock
+            pthread_cleanup_push(workstruct_cleanup_handler, &target);      //spingo clean up per target
+            //printf("worker sta lavorando su %s\n",target->filename);
 
-        if(exitreqval==1 && pqSize>0)
-        {
-            //printf("worker fa un ultimo giro\n");
-            flagwork=0;
+            sqePointer=malloc(sizeof(sqElement));
+            ec_null(sqePointer,"worker failed to do a malloc");
+            sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,MAX_PATH_LENGTH)+1));
+            ec_null(sqePointer->filename,"worker failed to do a malloc");
+            strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
+            sqePointer->val = fileCalc(target->filename);
+            sqePointer->next = NULL;
+            //printf("worker sta depositato %s\n",sqePointer->filename);
+            safeDeposit(sqePointer);
+
+            //printf("worker ha finito di dare in pasto a sender");
+            pthread_cleanup_pop(1); //tolgo per clean up del target con true
         }
-
-        //printf("worker cerca di raccogliere l'elemento\n");
-        target = queueHead;
-        queueHead = queueHead->next;
-        pqSize--; 
-        ec_zero(pthread_cond_signal(&pqFull),"worker's signal on pqFull failed\n");
-        pthread_cleanup_pop(1); //tolgo per cleanup del lock
-        pthread_cleanup_push(workstruct_cleanup_handler, &target);      //spingo clean up per target
-        //printf("worker sta lavorando su %s\n",target->filename);
-
-        sqePointer=malloc(sizeof(sqElement));
-        ec_null(sqePointer,"worker failed to do a malloc");
-        sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,MAX_PATH_LENGTH)+1));
-        ec_null(sqePointer->filename,"worker failed to do a malloc");
-        strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
-        sqePointer->val = fileCalc(target->filename);
-        sqePointer->next = NULL;
-        //printf("worker sta depositato %s\n",sqePointer->filename);
-        safeDeposit(sqePointer);
-
-        //printf("worker ha finito di dare in pasto a sender");
-        pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
-    pthread_exit(&retValue);
+    pthread_exit(NULL);
 }
 
