@@ -31,7 +31,18 @@ typedef struct supp
 
 int compare( const void* a, const void* b)
 {
-    return ( ((res*)a)->value - ((res*)b)->value );
+   if( ((res*)a)->value < ((res*)b)->value )
+   {
+    return -1;
+   }
+   else if( ((res*)a)->value > ((res*)b)->value )
+   {
+    return 1;
+   }
+   else
+   {
+    return 0;
+   }
 }
 
 void sigusr2_handler(int signum)
@@ -187,6 +198,8 @@ int main(int argc, char* argv[])
             //printf("collector read fatal error,ecco output fin'ora\n");
             printOutput(resultArray,arraySize);
             freeResultsArray(&resultArray, arraySize);
+            close(fdC);
+            close(fdSKT);
             return 0;
             //TODO: handle error
         }

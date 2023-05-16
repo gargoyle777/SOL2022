@@ -120,7 +120,7 @@ static void safeSend(int socketFD, sqElement element)
 static void safeExtract(sqElement** target, int fdSKT)
 {
     int exitreq=0;
-    pthread_cleanup_push(lock_cleanup_handler, NULL); 
+    pthread_cleanup_push(senderlock_cleanup_handler, NULL); 
     ec_zero(pthread_mutex_lock(&sendermtx),"sender's lock failed");
 
     while( sqSize <= 0)
