@@ -162,9 +162,9 @@ void* producerWorker(void* arg)
         strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
         sqePointer->val = fileCalc(target->filename);
         sqePointer->next = NULL;
-
+        //printf("worker sta depositato %s\n",sqePointer->filename);
         safeDeposit(sqePointer);
-        printf("worker ha depositato %s\n",sqePointer->filename);
+
         //printf("worker ha finito di dare in pasto a sender");
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
