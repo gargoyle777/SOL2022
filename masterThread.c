@@ -393,10 +393,12 @@ int main(int argc, char* argv[])
     }
 
     ec_zero(pthread_mutex_lock(&sendermtx),"pthread_mutex_lock failed with sendermtx, before checking flagSIGUSR1");
-    ec_zero(pthread_cond_signal(sqEmpty),"sendermtx signal\n");
+    ec_zero(pthread_cond_signal(&sqEmpty),"sendermtx signal\n");
+    ec_zero(pthread_mutex_unlock(&sendermtx),"pthread_mutex_lock failed with sendermtx, before checking flagSIGUSR1");
     printf("master inizia il join di sender\n");
     senderSocket=pthread_join(senderThread, NULL);
     ec_zero(senderSocket,"pthread_join failed");
+    
 
     printf("master ha finito di fare i join\n");
     for(i=0;i<sizeFileList;i++)
