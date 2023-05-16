@@ -58,7 +58,7 @@ static long fileCalc(char* fileAddress)
     
     while(fread(&tmp, sizeof(long),1,file) == 1)
     {
-        result = result + (tmp * i);
+        result = result + (tmp * (long)i);
         i++;
     }
     pthread_cleanup_pop(1); //true per fare il fclose
