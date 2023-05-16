@@ -43,6 +43,11 @@ void handle_sigusr1(int sig)
     flagSIGUSR1 = 1;
 }
 
+void handle_sigpipe(int signum)
+{
+    flagSIGUSR1 = 1;
+}
+
 static int insertElementQueue(char* target, int queueUpperLimit)
 {
     //printf("master si occupd di %s\n",target);
@@ -204,29 +209,30 @@ static void signalHandling()
 
     errno=0;
     ec_meno1(sigfillset(&set),(strerror(errno)));
-    errno=0;
-    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno))); 
+    ec_zero(pthread_sigmask(SIG_SETMASK,&set,NULL),"failed pthread_sigmask"); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
     errno=0;
-    ec_meno1(sigaction(SIGHUP,&sa,NULL),(strerror(errno)));
+    ec_meno1(sigaction(SIGHUP,&sa,NULL),("sigaction fail: SIGHUP"));
     sa.sa_handler=handle_sigint;
     errno=0;
-    ec_meno1(sigaction(SIGINT,&sa,NULL),(strerror(errno)));
+    ec_meno1(sigaction(SIGINT,&sa,NULL),("sigaction fail: SIGINT"));
     sa.sa_handler=handle_sigquit;
     errno=0;
-    ec_meno1(sigaction(SIGQUIT,&sa,NULL),(strerror(errno)));
+    ec_meno1(sigaction(SIGQUIT,&sa,NULL),("sigaction fail: SIGQUIT"));
     sa.sa_handler=handle_sigterm;
     errno=0;
-    ec_meno1(sigaction(SIGTERM,&sa,NULL),(strerror(errno)));
+    ec_meno1(sigaction(SIGTERM,&sa,NULL),("sigaction fail: SIGTERM"));
     sa.sa_handler=handle_sigusr1;
     errno=0;
-    ec_meno1(sigaction(SIGUSR1,&sa,NULL),(strerror(errno)));
+    ec_meno1(sigaction(SIGUSR1,&sa,NULL),("sigaction fail: SIGUSR1"));
+    sa.sa_handler=handle_sigpipe;
     errno=0;
+    ec_meno1(sigaction(SIGPIPE,&sa,NULL),("sigaction fail: SIGPIPE"));
     ec_meno1(sigemptyset(&set),(strerror(errno)));
     errno=0;
-    ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
+    ec_zero(pthread_sigmask(SIG_SETMASK,&set,NULL),("failed pthread_sigmask"));
 
 }
 

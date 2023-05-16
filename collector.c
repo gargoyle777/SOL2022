@@ -36,7 +36,12 @@ int compare( const void* a, const void* b)
 
 void sigusr2_handler(int signum)
 {
-    flagEndReading= 1;
+    flagEndReading = 1;
+}
+
+void sigpipe_handler(int signum)
+{
+    flagEndReading = 1;
 }
 
 static int sendACK(int fdC)
@@ -127,9 +132,14 @@ static void signalHandling()
     siga.sa_flags = 0;
     errno=0;
     ec_meno1(sigaction(SIGUSR2, &siga, NULL),"collector failed to call sigaction\n");
-    
+
+    siga.sa_handler = sigpipe_handler;
+    errno=0;
+    ec_meno1(sigaction(SIGPIPE, &siga, NULL),"collector failed to call sigaction\n");
+
     sigemptyset(&blockset);
     sigaddset(&blockset,SIGUSR2);
+    sigaddset(&blockset,SIGPIPE);
     sigprocmask(SIG_UNBLOCK,&blockset,NULL);
 }
 
