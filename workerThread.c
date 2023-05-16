@@ -50,7 +50,7 @@ static long fileCalc(char* fileAddress)
     long tmp;
     int i=0;
     long result = 0;
-    printf("worker sta per accedere a: %s\n",fileAddress);//testing
+    //printf("worker sta per accedere a: %s\n",fileAddress);//testing
 
     pthread_cleanup_push(file_cleanup_handler, &file);
     file = fopen(fileAddress, "rb"); 
@@ -62,7 +62,7 @@ static long fileCalc(char* fileAddress)
         i++;
     }
     pthread_cleanup_pop(1); //true per fare il fclose
-    printf("worker ha calcolato il valore: %ld\n", result);
+    //printf("worker ha calcolato il valore: %ld\n", result);
     return result;
 }
 
@@ -73,7 +73,7 @@ static void safeDeposit(sqElement* target)
     pthread_cleanup_push(sender_lock_cleanup_handler,NULL);  //lock del sender
     ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
 
-    printf("worker ha il sender lock, cerca di depositare\n");
+    //printf("worker ha il sender lock, cerca di depositare\n");
     if( sqSize == 0)
     {
         sqHead = target;
@@ -86,13 +86,13 @@ static void safeDeposit(sqElement* target)
         tmp->next = target;
     }
     sqSize++;
-    printf("worker ha depositato, rilascia il lock\n");
+    //printf("worker ha depositato, rilascia il lock\n");
     pthread_cleanup_pop(1); //rilascio il lock
 }
 
 void* producerWorker(void* arg)
 {
-    printf("worker avviato\n");
+    //printf("worker avviato\n");
     int flagwork=1;
     sqElement *sqePointer;
     qElem* target;
@@ -105,38 +105,38 @@ void* producerWorker(void* arg)
 
         while(queueSize==0 && masterExitReq==0)
         {
-        	printf("worker in attesa a causa di lista vuota\n");
+        	//printf("worker in attesa a causa di lista vuota\n");
             ec_zero(pthread_cond_wait(&queueEmpty,&mtx),"worker's cond wait on queueEmpty failed");
         }
         
-        printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
+        //printf("worker fuori dal loop con wait, queuesize= %d e masterExitReq=%d\n",queueSize, masterExitReq);
 
         if(queueSize==0)
         {
-        	printf("worker esce, 0 elementi nella queuesize e masterexitreq settato a 1\n");
+        	//printf("worker esce, 0 elementi nella queuesize e masterexitreq settato a 1\n");
             pthread_exit(&retValue);
 	    }
 
         if(masterExitReq==2)
         {
-           	printf("worker esce, masterexitreq settato a 2\n");
+           	//printf("worker esce, masterexitreq settato a 2\n");
            	pthread_exit(&retValue);
         }
 
         if(masterExitReq==1 && queueSize>0)
         {
-            printf("worker fa un ultimo giro\n");
+            //printf("worker fa un ultimo giro\n");
             flagwork=0;
         }
 
-        printf("worker cerca di raccogliere l'elemento\n");
+        //printf("worker cerca di raccogliere l'elemento\n");
         target = queueHead;
         queueHead = queueHead->next;
         queueSize--; 
         ec_zero(pthread_cond_signal(&queueFull),"worker's signal on queueFull failed");
         pthread_cleanup_pop(1); //tolgo per cleanup del lock
         pthread_cleanup_push(target_cleanup_handler, &target);      //spingo clean up per target
-        printf("worker sta lavorando su %s\n",target->filename);
+        //printf("worker sta lavorando su %s\n",target->filename);
 
         sqePointer=malloc(sizeof(sqElement));
         ec_null(sqePointer,"worker failed to do a malloc");
@@ -147,7 +147,7 @@ void* producerWorker(void* arg)
         sqePointer->next = NULL;
 
         safeDeposit(sqePointer);
-        printf("worker ha finito di dare in pasto a sender");
+        //printf("worker ha finito di dare in pasto a sender");
         pthread_cleanup_pop(1); //tolgo per clean up del target con true
     }
     pthread_exit(&retValue);

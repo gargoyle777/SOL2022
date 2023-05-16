@@ -44,11 +44,11 @@ static int safeConnect() //return the socket file descriptor
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
 
-    printf("sender inizia la routine di connessione\n");
+    //printf("sender inizia la routine di connessione\n");
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     errno=0;
     ec_meno1(fdSKT,(strerror(errno)));
-    printf("sender socket() ha funzionato\n");
+    //printf("sender socket() ha funzionato\n");
     counter=0;
     checker=0;
     while(counter<5)
@@ -58,7 +58,7 @@ static int safeConnect() //return the socket file descriptor
 
         if(checker==-1)
         {
-            printf("sender failed to connect: %d\n",counter);
+            //printf("sender failed to connect: %d\n",counter);
             sleep(1);
             counter+=1;
         }
@@ -66,7 +66,7 @@ static int safeConnect() //return the socket file descriptor
     }
 
     ec_meno1(checker,(strerror(errno)));
-    printf("sender connesso al collector\n");
+    //printf("sender connesso al collector\n");
     return fdSKT;
 }
 
@@ -81,7 +81,7 @@ static void safeACK(int socketFD)
         bytesRead = 0;
         ec_meno1(bytesRead=read(socketFD,ackHolder,3),"sender dead on ack read\n");
         totalBytesRead+= bytesRead;
-        printf("sender ha ricevuto un ACK\n");
+        //printf("sender ha ricevuto un ACK\n");
     }
 }
 
@@ -89,14 +89,14 @@ static void safeWrite(int socketFD, void* file, int size)
 {
     int bytesWritten = 0;
     int totalBytesWritten = 0;
-    if( size == 8u ) printf("sender sta per inviare il long: %ld\n", *(long*) file);
+    if( size == 8u ) //printf("sender sta per inviare il long: %ld\n", *(long*) file);
     while( totalBytesWritten < size )
     {
         errno = 0;
         bytesWritten = 0;
         ec_meno1(bytesWritten=write(socketFD, file, size),"sender dead on write!!\n"); 
         totalBytesWritten+= bytesWritten;
-        printf("sender ha scritto %d/%d\n",totalBytesWritten,size);
+        //printf("sender ha scritto %d/%d\n",totalBytesWritten,size);
     }
 }
 
@@ -120,11 +120,11 @@ static void safeExtract(sqElement** target)
 
     while( sqSize <= 0)
     {
-        printf("sender in attesa a causa di lista vuota\n");
+        //printf("sender in attesa a causa di lista vuota\n");
         ec_zero(pthread_cond_wait(&sqEmpty,&sendermtx),"sender's cond wait on sqEmpty failed");
     }
 
-    printf("sender fuori dal loop di wait, si prepara all'estrazione");
+    //printf("sender fuori dal loop di wait, si prepara all'estrazione");
 
     *target=sqHead;
     sqHead=sqHead->next;
@@ -134,7 +134,7 @@ static void safeExtract(sqElement** target)
 
 void* senderWorker(void* arg)
 {
-    printf("sender avviato\n");
+    //printf("sender avviato\n");
     int fdSKT; //file descriptor socket
     int flagWork=1;
     sqElement* target;
@@ -145,12 +145,12 @@ void* senderWorker(void* arg)
 
     while( flagWork == 1 )
     {
-        printf("sender prova a estrarre il target\n");
+        //printf("sender prova a estrarre il target\n");
         safeExtract(&target);
 
         pthread_cleanup_push(target_cleanup_handler, &target); 
         
-        printf("sender prova a mandare il target\n");
+        //printf("sender prova a mandare il target\n");
         safeSend(fdSKT,*target);
 
         pthread_cleanup_pop(1); // faccio il free dei valori
@@ -158,7 +158,7 @@ void* senderWorker(void* arg)
         if(masterExitReq != 0 && sqSize == 0) flagWork =0;
     }
 
-    printf("sender chiude \n");
+    //printf("sender chiude \n");
     pthread_cleanup_pop(0); //TODO: maybe closed to early? should be one lets keep it at 0 for testing
 
     pthread_exit(&retValue);

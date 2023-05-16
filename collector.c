@@ -44,16 +44,16 @@ static void checked_realloc(res **ptr, int length, size_t size)
     errno=0;
     if(length==1) 
     {
-        printf("provo malloc \n");
+        //printf("provo malloc \n");
         *ptr=malloc(length*size);
     }
     else 
     {
-        printf("provo realloc \n");
+        //printf("provo realloc \n");
         *ptr=realloc(*ptr, length*size);
     }
     ec_null(*ptr,"checked_realloc fallita");
-    printf("riuscita\n");
+    //printf("riuscita\n");
 }
 
 static int sendACK(int fdC)
@@ -68,7 +68,7 @@ static int sendACK(int fdC)
         bytesWritten=write(fdC, ack, 3);
         if(bytesWritten == -1) return -1;
         totalBytesWritten+= bytesWritten;
-        printf("collector ha scritto %d/%d\n",totalBytesWritten,3);
+        //printf("collector ha scritto %d/%d\n",totalBytesWritten,3);
     }
     return 0;
 }
@@ -84,18 +84,18 @@ static int safeSocketRead(int fdC, void* buffer, int size)
         byteRead=read(fdC,buffer,size);
         if (byteRead==-1)
         {
-            printf("collector read ha dato errore\n");
+            //printf("collector read ha dato errore\n");
             close(fdC);
             return -1;
         }
         if(byteRead==0)
         {
-            printf("collector read dice EOF\n");
+            //printf("collector read dice EOF\n");
             flagEndReading = 1;
             return 0;
         }
         totalByteRead+=byteRead;
-        printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
+        //printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
 
     if( sendACK(fdC) == -1 ) return -1;
@@ -118,7 +118,7 @@ static void printOutput(res *resultArray, int arraySize)
     int i;
     qsort(resultArray,arraySize,sizeof(res),compare);
 
-    printf("collector ha raccolto %d elementi\n",arraySize);
+    //printf("collector ha raccolto %d elementi\n",arraySize);
 
     for(i=0;i<arraySize;i++)
     {
@@ -128,7 +128,7 @@ static void printOutput(res *resultArray, int arraySize)
 
 int main(int argc, char* argv[])
 {
-	printf("collector avviato\n");//testing
+	//printf("collector avviato\n");//testing
 
     sigset_t blockset;
 
@@ -163,15 +163,15 @@ int main(int argc, char* argv[])
     sa.sun_family = AF_UNIX;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
     ec_meno1(fdSKT,(strerror(errno))); 
-    printf("collector prova a bindare\n");
+    //printf("collector prova a bindare\n");
     ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
-    printf("collector prova il listen\n");
+    //printf("collector prova il listen\n");
     ec_meno1(listen(fdSKT, 1),(strerror(errno))); 
 
     fdC = accept(fdSKT, NULL, 0);
     ec_meno1(fdC,"collector morto sull'accept");
 
-    printf("collector entra nel suo loop\n");
+    //printf("collector entra nel suo loop\n");
     while(!flagEndReading)
     {
         fileName= NULL;
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
         {
-            printf("collector read fatal error,ecco output fin'ora\n");
+            //printf("collector read fatal error,ecco output fin'ora\n");
             printOutput(resultArray,arraySize);
             freeResultsArray(&resultArray, arraySize);
             return 0;
@@ -195,14 +195,14 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
-            printf("collector read fatal error\n");
+            //printf("collector read fatal error\n");
             return 0;
             //TODO: handle error
         }
 
         if( safeSocketRead(fdC,&fileValue,8u) == -1)
         {
-            printf("collector read fatal error\n");
+            //printf("collector read fatal error\n");
             return 0;
             //TODO: handle error
         }
@@ -214,10 +214,10 @@ int main(int argc, char* argv[])
 
         resultArray[arraySize-1].name = fileName;
 
-        printf("collector ha raccolto: %s\n",resultArray[arraySize - 1].name);
+        //printf("collector ha raccolto: %s\n",resultArray[arraySize - 1].name);
     }
 
-    printf("collector e' fuori dal suo loop\n");
+    //printf("collector e' fuori dal suo loop\n");
  
     close(fdC);
     close(fdSKT);
@@ -225,6 +225,6 @@ int main(int argc, char* argv[])
 
     freeResultsArray(&resultArray, arraySize);
 
-    printf("---collector chiude---\n");
+    //printf("---collector chiude---\n");
     return 0;
 }
