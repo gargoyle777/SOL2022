@@ -51,9 +51,11 @@ void handle_sigusr1(int sig)
 static int insertElementQueue(char* target, int queueUpperLimit)
 {
     //printf("master si occupd di %s\n",target);
+    errno=0;
     ec_zero(pthread_mutex_lock(&(producermtx)),"pthread_mutex_lock failed with producermtx");
     while(pqSize>=queueUpperLimit)  //full queue
     {
+        errno=0;
         ec_zero(pthread_cond_wait(&(pqFull),&producermtx),"pthread_cond_wait failed on pqFull");
     }
     if(flagEndFetching == 1)     //setted
@@ -64,6 +66,7 @@ static int insertElementQueue(char* target, int queueUpperLimit)
     if(pqSize == 0)
     {
         //printf("master inizia a mettere un elemento in testa\n");
+        errno=0;
         queueHead = malloc(sizeof(pqElement));
         ec_null(queueHead,"malloc of queueHead failed");
         queueHead->next = NULL;
@@ -80,6 +83,7 @@ static int insertElementQueue(char* target, int queueUpperLimit)
         {
             tmpPointer = tmpPointer->next;
         }
+        errno=0;
         tmpPointer->next = malloc(sizeof(pqElement));
         ec_null(tmpPointer->next,"malloc of an element of the queue failed");
         tmpPointer = tmpPointer->next;
@@ -89,9 +93,10 @@ static int insertElementQueue(char* target, int queueUpperLimit)
         strncpy(tmpPointer->filename, target,  strnlen(target,MAX_PATH_LENGTH)+1);  
         pqSize++;
     }
-
+    errno=0;
     ec_zero(pthread_cond_signal(&pqEmpty),"pthread_cond_signal failed with pqEmpty");
     //printf("master ha segnalato su queue not empty\n");
+    errno=0;
     ec_zero(pthread_mutex_unlock(&producermtx),"pthread_mutex_unlock failed with producermtx");
     //printf("master ha lasciato il lock\n");
     return 1;
@@ -103,6 +108,7 @@ static int startCollectorProcess()
     char *collectorArgs[]={collectorPath,NULL};
     int pid;
     pid= fork();
+    errno=0;
     ec_meno1(pid,(strerror(errno)));
     if(pid==0)  //figlio
     {
@@ -115,6 +121,7 @@ static void addFileToList(char*** fileList, char* target, int* sizeFileList )
 {
     //printf("master vuole aggiungere %s\n",target);
     checked_realloc( (void**) fileList, (*sizeFileList) + 1, sizeof(char*));
+    errno=0;
     (*fileList)[*sizeFileList] = malloc(strnlen(target,MAX_PATH_LENGTH)+1);
     ec_null((*fileList)[*sizeFileList],"malloc fallita, stringa di elemento di fileList non allocato");
     strncpy( (*fileList)[*sizeFileList], target, strnlen(target, MAX_PATH_LENGTH) +1 );
@@ -138,6 +145,7 @@ static int checkFile(char* target)
 {
     struct stat fileInfo;
     int result = 0;
+    errno=0;
     int statRet= stat(target, &fileInfo);
     ec_meno1(statRet,strerror(errno));
     if (statRet == 0) 
@@ -177,6 +185,7 @@ static void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     struct dirent* entry;
     errno = 0;
     char newPath[MAX_PATH_LENGTH];
+    errno=0;
     ec_null(directory = opendir(path), strerror(errno));
 
     while ((entry=readdir(directory)) != NULL) 
@@ -233,10 +242,19 @@ int main(int argc, char* argv[])
     sigset_t set;
     struct sigaction sa;
 
-    pqSize = 0;
-    pthread_mutex_init(&producermtx,NULL);
+    ec_zero(pthread_mutex_init(&producermtx,NULL),"pthread_mutex_init failed");
+
+    ec_zero(pthread_mutex_init(&sendermtx,NULL),"pthread_mutex_init failed");
+
+    ec_zero(pthread_mutex_init(&requestmtx,NULL),"pthread_mutex_init failed");
+
     ec_zero(pthread_cond_init(&pqFull, NULL),"pthread_cond_init failed on condition pqFull");
+
     ec_zero(pthread_cond_init(&pqEmpty, NULL),"pthread_cond_init failed on condition pqEmpty");
+
+    ec_zero(pthread_cond_init(&sqEmpty,NULL),"pthread_cond_init failed");
+
+
 
     pthread_t senderThread;
     pthread_t *tSlaves;
@@ -258,22 +276,30 @@ int main(int argc, char* argv[])
     int insertRetVal = 0;
 
     //start signal masking
+    errno=0;
     ec_meno1(sigfillset(&set),(strerror(errno)));
+    errno=0;
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno))); 
 
     memset(&sa,0,sizeof(sa));
     sa.sa_handler=handle_sighup;
+    errno=0;
     ec_meno1(sigaction(SIGHUP,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigint;
+    errno=0;
     ec_meno1(sigaction(SIGINT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigquit;
+    errno=0;
     ec_meno1(sigaction(SIGQUIT,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigterm;
+    errno=0;
     ec_meno1(sigaction(SIGTERM,&sa,NULL),(strerror(errno)));
     sa.sa_handler=handle_sigusr1;
+    errno=0;
     ec_meno1(sigaction(SIGUSR1,&sa,NULL),(strerror(errno)));
-
+    errno=0;
     ec_meno1(sigemptyset(&set),(strerror(errno)));
+    errno=0;
     ec_meno1(pthread_sigmask(SIG_SETMASK,&set,NULL),(strerror(errno)));
     //END signal handling
 
@@ -343,6 +369,7 @@ int main(int argc, char* argv[])
     //END of collector process
 
     //START of threading
+    errno=0;
     tSlaves = malloc(nthread * sizeof(pthread_t));
     ec_null(tSlaves,"malloc fallita, tSalves non allocati");
     for(i=0; i<nthread;i++)
@@ -437,7 +464,8 @@ int main(int argc, char* argv[])
     //printf("master dice che collector returned with %d\n",WEXITSTATUS(checkk));
     errno=0;
     ec_zero(unlink(SOCKNAME),strerror(errno)); //clean the socket file 
-    ec_meno1(close(senderSocket),strerror(errno));
+    errno=0;
+    ec_meno1(close(senderSocket),"failed to close socket from master");
     //printf("master ha aspettato il collector\n---master chiude---\n");
     return 0;
 }

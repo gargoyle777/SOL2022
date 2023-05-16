@@ -42,7 +42,7 @@ static int safeConnect() //return the socket file descriptor
         }
         else counter = 5;
     }
-
+    errno=0;
     ec_meno1(checker,(strerror(errno)));
     //printf("sender connesso al collector\n");
     return fdSKT;
@@ -93,11 +93,13 @@ static void safeSend(int socketFD, sqElement element)
 static void safeExtract(sqElement** target, int fdSKT)
 {
     int exitreq=0;
+    errno=0;
     pthread_cleanup_push(senderlock_cleanup_handler, NULL); 
     ec_zero(pthread_mutex_lock(&sendermtx),"sender's lock failed");
 
     while( sqSize <= 0)
     {
+        errno=0;
         //printf("sender in attesa a causa di lista vuota\n");
         ec_zero(pthread_cond_wait(&sqEmpty,&sendermtx),"sender's cond wait on sqEmpty failed");
 

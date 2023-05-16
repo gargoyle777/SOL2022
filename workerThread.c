@@ -22,7 +22,7 @@ static long fileCalc(char* fileAddress)
 
     pthread_cleanup_push(file_cleanup_handler, &file);
     file = fopen(fileAddress, "rb"); 
-    ec_null(file,(strerror(errno)));
+    ec_null(file,"worker failed to open file\n");
     
     while(fread(&tmp, sizeof(long),1,file) == 1)
     {
@@ -37,9 +37,8 @@ static long fileCalc(char* fileAddress)
 static void safeDeposit(sqElement* target)
 {
     sqElement* tmp; 
-    
     pthread_cleanup_push(senderlock_cleanup_handler,NULL);  //lock del sender
-    ec_zero(pthread_mutex_lock(&sendermtx),"worker's lock for write failed"); 
+    ec_zero(pthread_mutex_lock(&sendermtx),"workerfailed to get sender lock\n"); 
 
     //printf("worker ha il sender lock, cerca di depositare\n");
     if( sqSize == 0)
@@ -73,14 +72,13 @@ void* producerWorker(void* arg)
         pthread_mutex_unlock(&requestmtx);
         pthread_cleanup_pop(0);
         sqePointer = NULL;
-
         pthread_cleanup_push(producerlock_cleanup_handler,NULL);       //spingo cleanup per lock
-        ec_zero(pthread_mutex_lock(&producermtx),"worker's lock failed");     
+        ec_zero(pthread_mutex_lock(&producermtx),"workerfailed to gain production lock\n");     
 
         while(pqSize==0 && exitreqval==0)
         {
         	//printf("worker in attesa a causa di lista vuota\n");
-            ec_zero(pthread_cond_wait(&pqEmpty,&producermtx),"worker's cond wait on pqEmpty failed");
+            ec_zero(pthread_cond_wait(&pqEmpty,&producermtx),"worker's cond wait on pqEmpty failed\n");
             pthread_cleanup_push(requestlock_cleanup_handler, NULL);
             pthread_mutex_lock(&requestmtx);
             if(masterExitReq!=0) exitreqval = masterExitReq;
@@ -110,11 +108,12 @@ void* producerWorker(void* arg)
         pthread_cleanup_pop(1); //tolgo per cleanup del lock
         pthread_cleanup_push(workstruct_cleanup_handler, &target);      //spingo clean up per target
         //printf("worker sta lavorando su %s\n",target->filename);
-
+        errno=0;
         sqePointer=malloc(sizeof(sqElement));
-        ec_null(sqePointer,"worker failed to do a malloc");
+        ec_null(sqePointer,"worker failed to do a malloc\n");
+        errno=0;
         sqePointer->filename = malloc(sizeof(char)*(strnlen(target->filename,MAX_PATH_LENGTH)+1));
-        ec_null(sqePointer->filename,"worker failed to do a malloc");
+        ec_null(sqePointer->filename,"worker failed to do a malloc\n");
         strncpy(sqePointer->filename,target->filename,strlen(target->filename)+1);
         sqePointer->val = fileCalc(target->filename);
         sqePointer->next = NULL;

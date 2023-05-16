@@ -125,9 +125,11 @@ int main(int argc, char* argv[])
     //signal handling for sigusr2
     struct sigaction siga;
     siga.sa_handler = sigusr2_handler;
-    ec_meno1(sigemptyset(&siga.sa_mask),(strerror(errno)));
+    errno=0;
+    ec_meno1(sigemptyset(&siga.sa_mask),"collector failed to call siemptyset\n");
     siga.sa_flags = 0;
-    ec_meno1(sigaction(SIGUSR2, &siga, NULL),(strerror(errno)));
+    errno=0;
+    ec_meno1(sigaction(SIGUSR2, &siga, NULL),"collector failed to call sigaction\n");
     
     sigemptyset(&blockset);
     sigaddset(&blockset,SIGUSR2);
@@ -147,17 +149,21 @@ int main(int argc, char* argv[])
 
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
     sa.sun_family = AF_UNIX;
+
+    errno=0;
     fdSKT = socket(AF_UNIX, SOCK_STREAM, 0);
-    ec_meno1(fdSKT,(strerror(errno))); 
-
-    ec_meno1(setsockopt(fdSKT,SOL_SOCKET,SO_REUSEADDR,&optionActive,sizeof(optionActive)),strerror(errno));
+    ec_meno1(fdSKT,"collector socket failed\n"); 
+    errno=0;
+    ec_meno1(setsockopt(fdSKT,SOL_SOCKET,SO_REUSEADDR,&optionActive,sizeof(optionActive)), "collector failed to set socket opt\n");
     //printf("collector prova a bindare\n");
-    ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),(strerror(errno)));
+    errno=0;
+    ec_meno1(bind(fdSKT, (struct sockaddr *) &sa, sizeof(sa)),"collector failed to bind\n");
     //printf("collector prova il listen\n");
-    ec_meno1(listen(fdSKT, 1),(strerror(errno))); 
-
+    errno=0;
+    ec_meno1(listen(fdSKT, 1),"collector failed to listen\n"); 
+    errno=0;
     fdC = accept(fdSKT, NULL, 0);
-    ec_meno1(fdC,"collector morto sull'accept");
+    ec_meno1(fdC,"collector failed to accept \n");
 
     //printf("collector entra nel suo loop\n");
     while(flagEndReading == 0)
@@ -177,11 +183,10 @@ int main(int argc, char* argv[])
             //TODO: handle error
         }
 
+        errno=0;
         fileName = malloc(nameSize+1);
-        ec_null(fileName,"collector malloc failed for file name");
+        ec_null(fileName,"collector malloc failed for file name\n");
         memset(fileName,0,nameSize+1);
-
-        ec_null(fileName,"collector failed to malloc");
 
         if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
