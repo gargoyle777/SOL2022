@@ -86,7 +86,7 @@ static int safeSocketRead(int fdC, void* buffer, int size)
         //printf("collector ha letto %d a questo giro, %d sommando le iterazioni, %d dovrebbero arrivare\n",byteRead,totalByteRead,size);
     } while (totalByteRead<size);
 
-    if( sendACK(fdC) == -1 ) return -1;
+    if( sendACK(fdC) == -1 ) return -2;
 
     return 0;
 }
@@ -157,6 +157,8 @@ int main(int argc, char* argv[])
     long fileValue;
     int optionActive=1;
 
+    int retval=0;
+
     //printf("collector avviato\n");//testing
     signalHandling();
 
@@ -185,7 +187,8 @@ int main(int argc, char* argv[])
         nameSize=0u;
         fileValue = 0;
 
-        if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
+        retval=safeSocketRead(fdC,&nameSize,sizeof(int));
+        if( retval < 0 )
         {
             //printf("collector read fatal error,ecco output fin'ora\n");
             printOutput(resultArray,arraySize);
@@ -193,7 +196,6 @@ int main(int argc, char* argv[])
             close(fdC);
             close(fdSKT);
             return 0;
-            //TODO: handle error
         }
 
         errno=0;
@@ -201,19 +203,26 @@ int main(int argc, char* argv[])
         ec_null(fileName,"collector malloc failed for file name\n");
         memset(fileName,0,nameSize+1);
 
-        if( safeSocketRead(fdC,fileName,nameSize) == -1)
+        retval = safeSocketRead(fdC,fileName,nameSize);
+        if(  retval < 0 )
         {
-            //printf("collector read fatal error\n");
+            printOutput(resultArray,arraySize);
+            freeResultsArray(&resultArray, arraySize);
+            close(fdC);
+            close(fdSKT);
             return 0;
-            //TODO: handle error
         }
 
-        if( safeSocketRead(fdC,&fileValue,8u) == -1)
+        retval = safeSocketRead(fdC,&fileValue,8u);
+        if( retval == -1 )
         {
-            //printf("collector read fatal error\n");
+            printOutput(resultArray,arraySize);
+            freeResultsArray(&resultArray, arraySize);
+            close(fdC);
+            close(fdSKT);
             return 0;
-            //TODO: handle error
         }
+        if( retval == -2) flagEndReading=0;
 
         arraySize++;
         checked_realloc((void**) &resultArray,arraySize, sizeof(res));     //realloc for result array

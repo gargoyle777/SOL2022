@@ -17,7 +17,6 @@ static int safeConnect() //return the socket file descriptor
 {
     int fdSKT; //file descriptor socket
     int checker; //check connect output
-    int requestval;
     struct sockaddr_un sa;
     int counter;
     strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
