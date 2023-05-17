@@ -177,13 +177,12 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,&nameSize,sizeof(int)) == -1)
         {
-            //printf("collector read fatal error,ecco output fin'ora\n");
+            //something went wrong, print and bye
             printOutput(resultArray,arraySize);
             freeResultsArray(&resultArray, arraySize);
             close(fdC);
             close(fdSKT);
             return 0;
-            //TODO: handle error
         }
 
         errno=0;
@@ -193,16 +192,14 @@ int main(int argc, char* argv[])
 
         if( safeSocketRead(fdC,fileName,nameSize) == -1)
         {
-            //printf("collector read fatal error\n");
+            //something went wrong, no need to stop yet
             return 0;
-            //TODO: handle error
         }
 
-        if( safeSocketRead(fdC,&fileValue,8u) == -1)
+        if( safeSocketRead(fdC,&fileValue,sizeof(long)) == -1)
         {
-            //printf("collector read fatal error\n");
+            //something went wrong, no need to stop yet
             return 0;
-            //TODO: handle error
         }
 
         arraySize++;

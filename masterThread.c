@@ -55,7 +55,7 @@ static int insertElementQueue(char* target, int queueUpperLimit)
     }
     if(flagEndFetching == 1)     //setted
     {
-        return 0; //TODO: CHECK this branch
+        return 0; 
     }
 
     if(pqSize == 0)
@@ -196,6 +196,7 @@ static void directoryDigger(char* path, char*** fileList, int* sizeFileList)
     errno=0;
     ec_meno1(closedir(directory),strerror(errno));
 }
+
 static void signalHandling()
 {
     //for masking
